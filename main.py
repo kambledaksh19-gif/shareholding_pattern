@@ -1,7 +1,12 @@
 import os
+import sys
 import uuid
 import shutil
 import zipfile
+
+# Add current directory to path to allow importing local modules on hosting environments
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+
 from fastapi import FastAPI, HTTPException, Query, BackgroundTasks, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
