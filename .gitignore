@@ -1,0 +1,31 @@
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv
+venv/
+ENV/
+
+# Project Specific Directories
+cache/
+temp_batch_compilation/
+scratch/
+
+# Local Output & Temp Files
+*.xlsx
+*.zip
+*.log
+
+# Scraper Debug / Dump HTML & JSON Files
+bse_api_response.html
+bse_direct.html
+screener_sbin.html
+stk.json
+mojo_sbin.json
+
+# OS files
+.DS_Store
+Thumbs.db

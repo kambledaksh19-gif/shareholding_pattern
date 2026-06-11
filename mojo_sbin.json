@@ -1,0 +1,684 @@
+{
+    "shareholding_snapshot": {
+        "header": "Shareholding Snapshot : Mar 26",
+        "sub_header": "Shareholding Snapshot",
+        "data": {
+            "pie": {
+                "promoters": {
+                    "field": "Promoters",
+                    "perc": "55.52%"
+                },
+                "mutual_funds": {
+                    "field": "Mutual Funds",
+                    "perc": "13.29%"
+                },
+                "insurance": {
+                    "field": "Insurance Companies",
+                    "perc": "10.42%"
+                },
+                "fiis": {
+                    "field": "FIIs",
+                    "perc": "11.41%"
+                },
+                "other": {
+                    "field": "Other",
+                    "perc": "0.88%"
+                },
+                "non_institution": {
+                    "field": "Non Institution",
+                    "perc": "6.81%"
+                },
+                "other_diis": {
+                    "field": "Other DIIs",
+                    "perc": "2.55%"
+                }
+            },
+            "rhs": [
+                {
+                    "prefix": "Majority shareholders",
+                    "suffix": "Promoters"
+                },
+                {
+                    "prefix": "Pledged Promoter Holdings",
+                    "suffix": "None"
+                },
+                {
+                    "prefix": "Mutual Funds",
+                    "suffix": "Held in 75.00 Schemes (13.29%)"
+                },
+                {
+                    "prefix": "FIIs",
+                    "suffix": "Held by 1393 FIIs (11.41%)"
+                },
+                {
+                    "prefix": "Promoter with highest holding",
+                    "suffix": "President Of India (55.5%)"
+                },
+                {
+                    "prefix": "Highest Public shareholder",
+                    "suffix": "Life Insurance Corporation Of India (9.23%)"
+                },
+                {
+                    "prefix": "Individual Investors Holdings",
+                    "suffix": "5.58%"
+                }
+            ]
+        }
+    },
+    "shareholding_compare": {
+        "header": "Shareholding Compare (%holding)",
+        "data": [
+            [
+                "Mar 26",
+                "Dec 25",
+                "Change(%)"
+            ],
+            [
+                "Promoters",
+                "55.52",
+                "55.50",
+                "0.02",
+                1
+            ],
+            [
+                "FIIs",
+                "11.41",
+                "10.34",
+                "1.07",
+                1
+            ],
+            [
+                "Mutual Funds",
+                "13.29",
+                "13.76",
+                "-0.47",
+                -1
+            ],
+            [
+                "Insurance Companies",
+                "10.42",
+                "10.91",
+                "-0.49",
+                -1
+            ],
+            [
+                "Other DIIs",
+                "2.55",
+                "2.52",
+                "0.03",
+                1
+            ],
+            [
+                "Non Institution",
+                "6.81",
+                "6.97",
+                "-0.16",
+                -1
+            ]
+        ]
+    },
+    "shareholding_analysis": {
+        "header": "Shareholding Analysis ",
+        "data": [
+            {
+                "prefix": "Promoters",
+                "sentence": "Promoter holding has increased by 0.02%  . However, the number of shares held by the Promoters has remained constant during the period",
+                "dir": 0
+            },
+            {
+                "prefix": "FII",
+                "sentence": "FII holding has increased by 1.07%",
+                "dir": 1
+            },
+            {
+                "prefix": "MF",
+                "sentence": "MF holding has decreased by -0.47%",
+                "dir": -1
+            },
+            {
+                "prefix": "Insurance",
+                "sentence": "Holdings of Insurance companies has decreased by -0.49%",
+                "dir": -1
+            },
+            {
+                "prefix": "OtherDII",
+                "sentence": "Other DII holding has increased by 0.03%",
+                "dir": 1
+            },
+            {
+                "prefix": "NII",
+                "sentence": "Holdings of Non Institutional Shareholders has decreased by -0.16%",
+                "dir": -1
+            }
+        ]
+    },
+    "shareholding_graphs": {
+        "data": [
+            {
+                "title": "Shareholding - Promoter holding",
+                "header": "Promoter holding 55.52%",
+                "sub_header": "in Mar 2026",
+                "graph_header": "Promoters Holding (%)",
+                "sentences": [
+                    {
+                        "sentence": "Promoter holding has increased by 0.02%  . However, the number of shares held by the Promoters has remained constant during the period",
+                        "dir": 0
+                    },
+                    {
+                        "sentence": "No change in Promoter pledged shares ",
+                        "dir": 0
+                    }
+                ],
+                "data": [
+                    [
+                        {
+                            "name": 202506,
+                            "y": 57.4179645284458,
+                            "Arrow": 0
+                        },
+                        {
+                            "name": 202507,
+                            "y": 55.4993987894969,
+                            "Arrow": 0
+                        },
+                        {
+                            "name": 202509,
+                            "y": 55.4986305393371,
+                            "Arrow": 0
+                        },
+                        {
+                            "name": 202512,
+                            "y": 55.5025353141281,
+                            "Arrow": 0
+                        },
+                        {
+                            "name": 202603,
+                            "y": 55.52,
+                            "Arrow": 0
+                        }
+                    ],
+                    [
+                        {
+                            "name": 202506,
+                            "y": 0,
+                            "Arrow": 0
+                        },
+                        {
+                            "name": 202507,
+                            "y": 0,
+                            "Arrow": 0
+                        },
+                        {
+                            "name": 202509,
+                            "y": 0,
+                            "Arrow": 0
+                        },
+                        {
+                            "name": 202512,
+                            "y": 0,
+                            "Arrow": 0
+                        },
+                        {
+                            "name": 202603,
+                            "y": 0,
+                            "Arrow": 0
+                        }
+                    ]
+                ]
+            },
+            {
+                "title": "Shareholding - FII Holdings",
+                "header": "FIIs Holdings 11.41%",
+                "sub_header": "in Mar 2026",
+                "graph_header": "FII Holding (%)",
+                "sentences": [
+                    {
+                        "sentence": "FII holding has increased by 1.07%",
+                        "dir": 1
+                    },
+                    {
+                        "sentence": "Number of FIIs holding stake in the company has increased to 1393 from 1222",
+                        "dir": 1
+                    }
+                ],
+                "data": [
+                    {
+                        "name": 202506,
+                        "y": 9.32948005084867,
+                        "Arrow": 0
+                    },
+                    {
+                        "name": 202507,
+                        "y": 9.976692593908831,
+                        "Arrow": 0
+                    },
+                    {
+                        "name": 202509,
+                        "y": 9.569754157491158,
+                        "Arrow": 0
+                    },
+                    {
+                        "name": 202512,
+                        "y": 10.341102820807993,
+                        "Arrow": 0
+                    },
+                    {
+                        "name": 202603,
+                        "y": 11.41,
+                        "Arrow": 1
+                    }
+                ]
+            },
+            {
+                "title": "Shareholding - MF Holdings",
+                "header": "MF Holdings 13.29%",
+                "sub_header": "in Mar 2026",
+                "graph_header": "MF Holding (%)",
+                "sentences": [
+                    {
+                        "sentence": "MF holding has decreased by -0.47%",
+                        "dir": -1
+                    },
+                    {
+                        "sentence": "Number of MFs holding stake in the company has decreased to 75 from 76",
+                        "dir": -1
+                    }
+                ],
+                "data": [
+                    {
+                        "name": 202506,
+                        "y": 13.0188962671904,
+                        "Arrow": 0
+                    },
+                    {
+                        "name": 202507,
+                        "y": 13.8327389003204,
+                        "Arrow": 0
+                    },
+                    {
+                        "name": 202509,
+                        "y": 14.2312641496822,
+                        "Arrow": 0
+                    },
+                    {
+                        "name": 202512,
+                        "y": 13.7575226831502,
+                        "Arrow": 0
+                    },
+                    {
+                        "name": 202603,
+                        "y": 13.29,
+                        "Arrow": -1
+                    }
+                ]
+            },
+            {
+                "title": "Shareholding - Insurance Holdings",
+                "header": "Insurance Holdings 10.42%",
+                "sub_header": "in Mar 2026",
+                "graph_header": "Insurance Companies Holding (%)",
+                "sentences": [
+                    {
+                        "sentence": "Holdings of Insurance companies has decreased by -0.49%",
+                        "dir": -1
+                    },
+                    {
+                        "sentence": "Number of Insurance companies holding stake in the company has decreased to 43 from 44",
+                        "dir": -1
+                    }
+                ],
+                "data": [
+                    {
+                        "name": 202506,
+                        "y": 10.473734292688,
+                        "Arrow": 0
+                    },
+                    {
+                        "name": 202507,
+                        "y": 11.1333054587873,
+                        "Arrow": 0
+                    },
+                    {
+                        "name": 202509,
+                        "y": 11.2490898799784,
+                        "Arrow": 0
+                    },
+                    {
+                        "name": 202512,
+                        "y": 10.9114959337761,
+                        "Arrow": 0
+                    },
+                    {
+                        "name": 202603,
+                        "y": 10.42,
+                        "Arrow": -1
+                    }
+                ]
+            },
+            {
+                "title": "Shareholding - Other DII Holdings",
+                "header": "Other DII Holdings 2.55%",
+                "sub_header": "in Mar 2026",
+                "graph_header": "Other DII Holding (%)",
+                "sentences": [
+                    {
+                        "sentence": "Other DII holding has increased by 0.03%",
+                        "dir": 1
+                    },
+                    {
+                        "sentence": "Number of Other DIIs holding stake in the company has decreased to 180 from 197",
+                        "dir": -1
+                    }
+                ],
+                "data": [
+                    {
+                        "name": 202506,
+                        "y": 2.2,
+                        "Arrow": 0
+                    },
+                    {
+                        "name": 202507,
+                        "y": 2.27,
+                        "Arrow": 0
+                    },
+                    {
+                        "name": 202509,
+                        "y": 2.32,
+                        "Arrow": 0
+                    },
+                    {
+                        "name": 202512,
+                        "y": 2.52,
+                        "Arrow": 0
+                    },
+                    {
+                        "name": 202603,
+                        "y": 2.55,
+                        "Arrow": 1
+                    }
+                ]
+            },
+            {
+                "title": "Shareholding - NIIs Holdings",
+                "header": "NIIs Holdings 6.81%",
+                "sub_header": "in Mar 2026",
+                "graph_header": "Non-Institutional Investors Holding (%)",
+                "sentences": [
+                    {
+                        "sentence": "Holdings of Non Institutional Shareholders has decreased by -0.16%",
+                        "dir": -1
+                    },
+                    {
+                        "sentence": "Number of Non Institutional Shareholders holding stake in the company has increased to 3761734 from 3565920",
+                        "dir": 1
+                    }
+                ],
+                "data": [
+                    {
+                        "name": 202506,
+                        "y": 7.56432973352428,
+                        "Arrow": 0
+                    },
+                    {
+                        "name": 202507,
+                        "y": 7.2849934855726,
+                        "Arrow": 0
+                    },
+                    {
+                        "name": 202509,
+                        "y": 7.13239897465477,
+                        "Arrow": 0
+                    },
+                    {
+                        "name": 202512,
+                        "y": 6.96712769030242,
+                        "Arrow": 0
+                    },
+                    {
+                        "name": 202603,
+                        "y": 6.81,
+                        "Arrow": -1
+                    }
+                ]
+            }
+        ]
+    },
+    "shareholding_snapshot_currentquarter": {
+        "header": "Shareholding Snapshot : Mar 26",
+        "data": [
+            {
+                "name": "Shareholders",
+                "shares": "Shares(Cr.)",
+                "perc": "Holding(%)"
+            },
+            {
+                "name": "Promoters <p class=\"subhed\">Pledged shares</p>",
+                "shares": "507.98<p class=\"subcont\">0.00</p>",
+                "perc": "55.52%<p class=\"subcont\">0.00%</p>"
+            },
+            {
+                "name": "FIIs",
+                "shares": "104.43",
+                "perc": "11.41%"
+            },
+            {
+                "name": "Mutual Funds",
+                "shares": "121.60",
+                "perc": "13.29%"
+            },
+            {
+                "name": "Insurance",
+                "shares": "95.32",
+                "perc": "10.42%"
+            },
+            {
+                "name": "Other DIIs",
+                "shares": "23.28",
+                "perc": "2.55%"
+            },
+            {
+                "name": "Non Institutional Investors",
+                "shares": "62.29",
+                "perc": "6.81%"
+            },
+            {
+                "name": "Othes",
+                "shares": 0,
+                "perc": "0.00%"
+            },
+            {
+                "name": "<b>Total</b>",
+                "shares": "914.90",
+                "perc": "100%"
+            }
+        ]
+    },
+    "promoter_holding": {
+        "details": {
+            "title": "Promoter Holding - Mar 26",
+            "data": [
+                [
+                    "Shareholders",
+                    "Total Shares(Cr.)",
+                    "in %"
+                ],
+                {
+                    "shp_name": "President Of India",
+                    "shp_perc": "55.5%",
+                    "num_shares": "507.98"
+                }
+            ],
+            "alert": ""
+        }
+    },
+    "public_shareholding": {
+        "abovefiveperc": {
+            "title": "Public Shareholders <span class=\"crore\">(above 5%) </span> Mar 26",
+            "data": [
+                [
+                    "Shareholders",
+                    "Total Shares(Cr.)",
+                    "in %"
+                ],
+                {
+                    "shp_name": "Life Insurance Corporation Of India",
+                    "shp_perc": "9.23%",
+                    "num_shares": "84.51"
+                }
+            ],
+            "alert": ""
+        },
+        "aboveoneperc": {
+            "title": "Public Shareholders <span class=\"crore\">(above 1%) </span> Mar 26",
+            "data": [
+                [
+                    "Shareholders",
+                    "Total Shares(Cr.)",
+                    "in %"
+                ],
+                {
+                    "shp_name": "Sbi Mutual Fund Schemes",
+                    "shp_perc": "3.17%",
+                    "num_shares": "28.98"
+                },
+                {
+                    "shp_name": "Nps Trust Schemes",
+                    "shp_perc": "1.9%",
+                    "num_shares": "17.43"
+                },
+                {
+                    "shp_name": "Hdfc Mutual Fund Schemes",
+                    "shp_perc": "1.82%",
+                    "num_shares": "16.64"
+                },
+                {
+                    "shp_name": "Icici Mutual Fund Schemes",
+                    "shp_perc": "1.44%",
+                    "num_shares": "13.21"
+                },
+                {
+                    "shp_name": "Nippon Life India Mutual Fund Schemes",
+                    "shp_perc": "1.35%",
+                    "num_shares": "12.37"
+                },
+                {
+                    "shp_name": "Kotak Mutual Fund Schemes",
+                    "shp_perc": "1.11%",
+                    "num_shares": "10.18"
+                }
+            ],
+            "alert": ""
+        }
+    },
+    "inside_trades": {
+        "details": {
+            "title": "Insider Trades (Last 1 Month)",
+            "data": {
+                "alert": "No Insider Trades in the last 1 Month"
+            }
+        }
+    },
+    "pledged_shares": {
+        "details": {
+            "title": "Pledged Shares (Last 1 Month)",
+            "data": {
+                "alert": "No Promoter pledged Shares in the last 1 month"
+            }
+        }
+    },
+    "compare_with": {
+        "header_dropdown": [
+            {
+                "key": 824055,
+                "val": "Bank Of Baroda"
+            },
+            {
+                "key": 998049,
+                "val": "Union Bank (I)"
+            },
+            {
+                "key": 616556,
+                "val": "Punjab Natl.Bank"
+            },
+            {
+                "key": 954692,
+                "val": "Canara Bank"
+            },
+            {
+                "key": 590845,
+                "val": "Indian Bank"
+            },
+            {
+                "key": 793993,
+                "val": "Bank Of India"
+            },
+            {
+                "key": 364261,
+                "val": "I O B"
+            },
+            {
+                "key": 291436,
+                "val": "Bank of Maha"
+            },
+            {
+                "key": 767147,
+                "val": "UCO Bank"
+            },
+            {
+                "key": 721368,
+                "val": "Central Bank"
+            }
+        ],
+        "selected_dropdown": "undefined",
+        "headers": [
+            "Shareholders",
+            "SBI <p class='condi-p'> Mar 2026</p>",
+            " <p class='condi-p'> Mar 2026</p>"
+        ],
+        "data": [
+            [
+                {
+                    "field": "Promoters",
+                    "main_stock_value": "55.52%",
+                    "compared_stock_value": "0.00"
+                },
+                {
+                    "field": "Pledged Shares",
+                    "main_stock_value": "0.00%",
+                    "compared_stock_value": ""
+                }
+            ],
+            {
+                "field": "FIIs",
+                "main_stock_value": "11.41%",
+                "compared_stock_value": "0.00"
+            },
+            {
+                "field": "Mutual Funds",
+                "main_stock_value": "13.29%",
+                "compared_stock_value": "0.00"
+            },
+            {
+                "field": "Insurance Companies",
+                "main_stock_value": "10.42%",
+                "compared_stock_value": "0.00"
+            },
+            {
+                "field": "DIIs",
+                "main_stock_value": "2.55%",
+                "compared_stock_value": "0.00"
+            },
+            {
+                "field": "Non Institution Investors",
+                "main_stock_value": "6.81%",
+                "compared_stock_value": "0.00"
+            },
+            {
+                "field": "Others",
+                "main_stock_value": "0.88%",
+                "compared_stock_value": "0.00"
+            }
+        ],
+        "msg": ""
+    }
+}
