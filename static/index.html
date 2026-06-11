@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BSE Shareholding Pattern Compiler & Viewer</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- ChartJS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dark-mode">
+    <div class="background-decor">
+        <div class="circle circle-1"></div>
+        <div class="circle circle-2"></div>
+        <div class="circle circle-3"></div>
+    </div>
+
+    <header>
+        <div class="header-container">
+            <div class="logo">
+                <i class="fa-solid fa-chart-pie logo-icon"></i>
+                <div class="logo-text">
+                    <h1>Antigravity</h1>
+                    <span>BSE Shareholding Patterns</span>
+                </div>
+            </div>
+
+            <div class="search-section">
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" id="search-input" placeholder="Search stock symbol or name (e.g. SBIN, TCS, INFY)..." autocomplete="off">
+                    <div id="search-spinner" class="spinner hidden"></div>
+                    <div id="suggestions-list" class="suggestions-dropdown hidden"></div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button id="batch-mode-btn" class="btn-icon" title="Switch to Batch Mode">
+                    <i class="fa-solid fa-cubes"></i>
+                </button>
+                <button id="theme-toggle" class="btn-icon" title="Toggle Light/Dark Theme">
+                    <i class="fa-solid fa-sun"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Default Landing screen when no stock is searched -->
+        <section id="landing-hero" class="glass-panel hero-section">
+            <div class="hero-content">
+                <i class="fa-solid fa-chart-line hero-icon"></i>
+                <h2>Historical Shareholding Pattern Compiler</h2>
+                <p>Lookup any listed company on the Bombay Stock Exchange (BSE). Fetch, parse, and analyze historical annual shareholding patterns since listing, and compile the entire database into a beautifully styled multi-sheet Excel file.</p>
+                <div class="quick-links">
+                    <span>Try searching:</span>
+                    <button class="quick-search-btn" data-symbol="SBIN">SBIN</button>
+                    <button class="quick-search-btn" data-symbol="TCS">TCS</button>
+                    <button class="quick-search-btn" data-symbol="RELIANCE">RELIANCE</button>
+                    <button class="quick-search-btn" data-symbol="INFY">INFY</button>
+                </div>
+                <div class="hero-actions" style="margin-top: 25px;">
+                    <button id="hero-batch-btn" class="btn-primary">
+                        <i class="fa-solid fa-cubes"></i> Batch Compile Multiple Stocks
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Loader screen while fetching stock details -->
+        <div id="main-loader" class="loader-overlay hidden">
+            <div class="loader-container">
+                <div class="radar-spinner"></div>
+                <h3 id="loader-status">Fetching data from BSE...</h3>
+                <p id="loader-substatus">This may take a minute for companies with long listing histories.</p>
+            </div>
+        </div>
+
+        <!-- Dashboard Content Grid (Visible once stock is loaded) -->
+        <div id="dashboard-content" class="dashboard-grid hidden">
+            
+            <!-- Left Panel: Company Card & Trend Chart -->
+            <div class="grid-col left-panel">
+                <!-- Company Summary Card -->
+                <div class="glass-panel company-card">
+                    <div class="card-header">
+                        <div>
+                            <span class="badge">BSE Listed</span>
+                            <h2 id="company-name">State Bank of India</h2>
+                            <p id="company-meta">Scrip Code: 500112 | Symbol: SBIN</p>
+                        </div>
+                        <a id="excel-download-link" href="#" class="btn-primary" title="Download compiled Excel file">
+                            <i class="fa-solid fa-file-excel"></i> Compile Excel
+                        </a>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stat-box">
+                            <span class="stat-label">Years of Data</span>
+                            <span class="stat-value" id="stat-years">26</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-label">Latest Promoter %</span>
+                            <span class="stat-value" id="stat-promoters">55.52%</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-label">Latest Public %</span>
+                            <span class="stat-value" id="stat-public">44.48%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Historical Trend Chart Panel -->
+                <div class="glass-panel chart-panel">
+                    <h3><i class="fa-solid fa-chart-area"></i> Shareholding Trend Over Time</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="trend-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Tabs, Table selectors & Data display -->
+            <div class="grid-col right-panel">
+                <div class="glass-panel data-panel">
+                    
+                    <!-- Year selector tabs -->
+                    <div class="year-tabs-wrapper">
+                        <span class="nav-arrow left" id="tabs-scroll-left"><i class="fa-solid fa-chevron-left"></i></span>
+                        <div class="year-tabs" id="year-tabs-container">
+                            <!-- Year buttons will be dynamically injected here -->
+                        </div>
+                        <span class="nav-arrow right" id="tabs-scroll-right"><i class="fa-solid fa-chevron-right"></i></span>
+                    </div>
+
+                    <!-- Category table tabs -->
+                    <div class="table-tabs-header">
+                        <div class="table-tabs" id="table-tabs-container">
+                            <button class="table-tab-btn active" data-tab="summary">
+                                <i class="fa-solid fa-table-list"></i> Summary
+                            </button>
+                            <button class="table-tab-btn" data-tab="promoter">
+                                <i class="fa-solid fa-user-shield"></i> Promoter & Group
+                            </button>
+                            <button class="table-tab-btn" data-tab="public">
+                                <i class="fa-solid fa-users"></i> Public Shareholders
+                            </button>
+                            <button class="table-tab-btn" data-tab="non_promoter">
+                                <i class="fa-solid fa-building-columns"></i> Non-Promoter Non-Public
+                            </button>
+                        </div>
+                        <div class="reporting-standard-note" id="reporting-standard">
+                            SEBI Regulation 31 Format
+                        </div>
+                    </div>
+
+                    <!-- Display Table Container -->
+                    <div class="table-content-area">
+                        <div class="table-responsive">
+                            <table class="data-table" id="data-table">
+                                <thead id="table-head">
+                                    <!-- Table headers injected dynamically -->
+                                </thead>
+                                <tbody id="table-body">
+                                    <!-- Table rows injected dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="table-empty-message" class="table-empty-msg hidden">
+                            <i class="fa-solid fa-circle-info"></i> No detailed records found for this category.
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Batch Compiler Section (Hidden by default) -->
+        <section id="batch-panel" class="glass-panel batch-section hidden">
+            <div class="batch-header">
+                <h2><i class="fa-solid fa-cubes"></i> Batch Compiler</h2>
+                <button id="close-batch-btn" class="btn-icon" title="Back to Search">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <p class="batch-desc">Upload a CSV file containing BSE listed company symbols or 6-digit scrip codes. The system will compile historical quarterly shareholding patterns along with stock price performance (CMP after one month, CMP after 18 months, CMP after 24 months) and export everything into a single consolidated Excel sheet.</p>
+            
+            <div class="drag-drop-zone" id="drop-zone">
+                <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+                <h3>Drag & Drop CSV file here</h3>
+                <p>or click to browse from your computer</p>
+                <input type="file" id="csv-file-input" accept=".csv" class="hidden-input">
+            </div>
+            
+            <div id="batch-progress-container" class="batch-progress-card hidden">
+                <div class="progress-status-header">
+                    <span class="active-task-label" id="batch-current-symbol">Processing...</span>
+                    <span class="progress-percentage" id="batch-progress-text">0%</span>
+                </div>
+                
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="batch-progress-bar" style="width: 0%"></div>
+                </div>
+                
+                <div class="batch-stats">
+                     <div class="b-stat">
+                         <span class="b-stat-label">Total Queue</span>
+                         <span class="b-stat-value" id="batch-stat-total">0</span>
+                     </div>
+                     <div class="b-stat text-success">
+                         <span class="b-stat-label">Compiled</span>
+                         <span class="b-stat-value" id="batch-stat-compiled">0</span>
+                     </div>
+                     <div class="b-stat text-danger">
+                         <span class="b-stat-label">Failed</span>
+                         <span class="b-stat-value" id="batch-stat-failed">0</span>
+                     </div>
+                </div>
+                
+                <div id="batch-loader" class="batch-loading-indicator">
+                    <div class="mini-spinner"></div>
+                    <span id="batch-status-message">Scraping data from BSE India...</span>
+                </div>
+                
+                <div class="batch-action-row">
+                    <a id="batch-download-btn" href="#" class="btn-primary hidden">
+                        <i class="fa-solid fa-file-excel"></i> Download Excel Report
+                    </a>
+                    <button id="batch-reset-btn" class="btn-secondary hidden">
+                        Compile New Batch
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>© 2026 Antigravity. Sourced directly and exclusively from the Bombay Stock Exchange (BSE India).</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
