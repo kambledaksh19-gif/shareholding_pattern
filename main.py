@@ -124,7 +124,10 @@ def process_batch_job(job_id: str, symbols: list, output_xlsx_path: str):
     batch_jobs[job_id]["status"] = "processing"
     
     def progress_callback(sym, idx, total, completed_count, failed_count, status_str):
-        batch_jobs[job_id]["current_symbol"] = sym
+        sym_name = sym
+        if isinstance(sym, dict):
+            sym_name = sym.get("nse") or sym.get("bse") or ""
+        batch_jobs[job_id]["current_symbol"] = sym_name
         batch_jobs[job_id]["completed"] = completed_count
         batch_jobs[job_id]["failed"] = failed_count
 

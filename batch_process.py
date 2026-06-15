@@ -16,10 +16,9 @@ from backend.price_helper import PriceFetcher, get_quarter_end_date, add_months
 
 def extract_symbols_from_csv(csv_content_or_path):
     """
-    Parses CSV and returns a list of symbols/scrip codes.
-    Checks headers for common names or defaults to first column.
+    Parses CSV and returns a list of dicts: [{"bse": "...", "nse": "..."}, ...]
+    Auto-detects BSE scrip code column and NSE symbol column.
     """
-    symbols = []
     rows = []
     
     try:
@@ -44,36 +43,89 @@ def extract_symbols_from_csv(csv_content_or_path):
     if not rows:
         return []
         
-    # Find header row and target column index
-    header = [str(x).strip().lower() for x in rows[0]]
-    col_idx = 0
+    # Simple check for header presence
+    first_row = [str(x).strip().lower() for x in rows[0]]
+    target_names = ["symbol", "ticker", "scripcode", "scrip code", "code", "scrip_code", "company symbol", "company code", "bse", "nse"]
+    has_header = any(any(name in col for name in target_names) for col in first_row) or not any(col.isdigit() for col in first_row if col)
     
-    # Common names for symbol/scrip code columns
-    target_names = ["symbol", "ticker", "scripcode", "scrip code", "code", "scrip_code", "company symbol", "company code"]
-    for idx, col in enumerate(header):
-        if any(name in col for name in target_names):
-            col_idx = idx
-            break
-            
-    has_header = any(name in header[col_idx] for name in target_names) or not (header[col_idx].isdigit() or (header[col_idx].isupper() and len(header[col_idx]) <= 10))
-    # If header contains one of target names or isn't a digit/ticker code, skip first row
     start_row = 1 if has_header else 0
     
-    for r in rows[start_row:]:
-        if len(r) > col_idx:
-            val = str(r[col_idx]).strip()
-            if val:
-                symbols.append(val)
-                
-    # Deduplicate symbols keeping order
-    seen = set()
-    deduped = []
-    for s in symbols:
-        if s not in seen:
-            seen.add(s)
-            deduped.append(s)
+    bse_col_idx = None
+    nse_col_idx = None
+    
+    # 1. Header mapping
+    if has_header:
+        for idx, col in enumerate(first_row):
+            if "bse" in col or "scrip" in col or "code" in col:
+                if "nse" not in col:
+                    bse_col_idx = idx
+            elif "nse" in col or "symbol" in col or "ticker" in col:
+                if "bse" not in col:
+                    nse_col_idx = idx
+                    
+    # 2. Value-based auto-detection fallback
+    num_cols = len(rows[start_row]) if len(rows) > start_row else 0
+    if (bse_col_idx is None or nse_col_idx is None) and num_cols > 0:
+        col_scores = []
+        for col in range(num_cols):
+            bse_score = 0
+            nse_score = 0
+            for r in rows[start_row:start_row+10]:
+                if col < len(r):
+                    val = str(r[col]).strip()
+                    if not val:
+                        continue
+                    if val.isdigit() and len(val) == 6:
+                        bse_score += 2
+                    elif val.isalpha() and 2 <= len(val) <= 10:
+                        nse_score += 2
+                        bse_score -= 1
+                    elif val.isalnum() and 2 <= len(val) <= 10:
+                        nse_score += 1
+            col_scores.append({"bse": bse_score, "nse": nse_score})
             
-    return deduped
+        if bse_col_idx is None:
+            best_bse = -999
+            for idx, sc in enumerate(col_scores):
+                if sc["bse"] > best_bse:
+                    best_bse = sc["bse"]
+                    bse_col_idx = idx
+                    
+        if nse_col_idx is None:
+            best_nse = -999
+            for idx, sc in enumerate(col_scores):
+                if idx == bse_col_idx and num_cols > 1:
+                    continue
+                if sc["nse"] > best_nse:
+                    best_nse = sc["nse"]
+                    nse_col_idx = idx
+                    
+    # Fallback to defaults
+    if bse_col_idx is None:
+        bse_col_idx = 0
+    if nse_col_idx is None:
+        nse_col_idx = 1 if num_cols > 1 else 0
+        
+    symbols = []
+    seen = set()
+    for r in rows[start_row:]:
+        bse_val = ""
+        nse_val = ""
+        if len(r) > bse_col_idx:
+            bse_val = str(r[bse_col_idx]).strip()
+        if len(r) > nse_col_idx:
+            nse_val = str(r[nse_col_idx]).strip()
+            
+        if bse_val or nse_val:
+            key = (bse_val, nse_val)
+            if key not in seen:
+                seen.add(key)
+                symbols.append({
+                    "bse": bse_val,
+                    "nse": nse_val
+                })
+                
+    return symbols
 
 def run_batch_compilation(symbols, output_xlsx_path, progress_callback=None):
     """
@@ -88,28 +140,53 @@ def run_batch_compilation(symbols, output_xlsx_path, progress_callback=None):
     all_data_rows = []
     
     for idx, sym in enumerate(symbols, 1):
-        print(f"[{idx}/{total}] Processing {sym}...")
+        bse_code = ""
+        nse_code = ""
+        if isinstance(sym, dict):
+            bse_code = sym.get("bse", "")
+            nse_code = sym.get("nse", "")
+        else:
+            bse_code = str(sym)
+            nse_code = str(sym)
+            
+        sym_name = bse_code if bse_code else nse_code
+        print(f"[{idx}/{total}] Processing {sym_name}...")
         if progress_callback:
             progress_callback(sym, idx, total, completed, failed, "processing")
             
         try:
             # 1. Fetch quarterly data
-            data = get_quarterly_shareholding_pattern(sym)
-            if "error" in data:
-                print(f"Error scraping {sym}: {data['error']}")
+            data = None
+            if bse_code:
+                data = get_quarterly_shareholding_pattern(bse_code)
+                if not data or "error" in data:
+                    print(f"BSE search failed/no-data for {bse_code}.")
+                    data = None
+            
+            if not data and nse_code:
+                print(f"Attempting to fetch via NSE code: {nse_code}...")
+                data = get_quarterly_shareholding_pattern(nse_code)
+                
+            if not data or "error" in data:
+                error_msg = data.get("error", "No data returned") if data else "No data returned"
+                print(f"Error scraping {sym_name}: {error_msg}")
                 failed += 1
                 if progress_callback:
                     progress_callback(sym, idx, total, completed, failed, "failed")
                 continue
                 
-            company_name = data.get("company_name", sym)
-            scrip_code = data.get("scrip_code", sym)
+            company_name = data.get("company_name", sym_name)
+            scrip_code = data.get("scrip_code", sym_name)
             symbol_ticker = data.get("symbol", "")
+            
+            # Override symbol_ticker if it is missing or numeric/generic and we have an NSE code from the CSV
+            if (not symbol_ticker or symbol_ticker.isdigit() or "BSE_" in symbol_ticker) and nse_code:
+                symbol_ticker = nse_code
             
             # 2. Sort quarters chronologically
             quarters_dict = data.get("quarters", {})
             if not quarters_dict:
-                print(f"No quarterly data found for {sym}.")
+                print(f"No quarterly data found for {sym_name}.")
                 failed += 1
                 if progress_callback:
                     progress_callback(sym, idx, total, completed, failed, "failed")
@@ -124,7 +201,7 @@ def run_batch_compilation(symbols, output_xlsx_path, progress_callback=None):
             
             # 3. Instantiate PriceFetcher
             print(f"Fetching historical prices for {company_name} ({scrip_code})...")
-            price_fetcher = PriceFetcher(scrip_code, symbol_ticker)
+            price_fetcher = PriceFetcher(scrip_code, symbol_ticker, company_name)
             
             # Helper to get promoter holding percentage
             def get_promoter_pct(qtr_data):
@@ -172,25 +249,26 @@ def run_batch_compilation(symbols, output_xlsx_path, progress_callback=None):
                     date_24_str = add_months(base_date_obj, 24).strftime("%Y-%m-%d")
                     cmp_24 = price_fetcher.get_price_on_date(date_24_str)
                 
-                # Append row
-                company_rows.append({
-                    "company_name": company_name,
-                    "change": change,
-                    "change_str": change_str,
-                    "quarter": f"{qtr_month}-{year}",
-                    "cmp": cmp_price,
-                    "cmp_18": cmp_18,
-                    "cmp_24": cmp_24,
-                    # For sorting all rows at the end if desired (oldest first)
-                    "sort_key": (int(year), months_order.index(qtr_month))
-                })
+                # Only include the line if there was a change in promoter holdings
+                if abs(change) > 0.0001:
+                    company_rows.append({
+                        "company_name": company_name,
+                        "change": change,
+                        "change_str": change_str,
+                        "quarter": f"{qtr_month}-{year}",
+                        "cmp": cmp_price,
+                        "cmp_18": cmp_18,
+                        "cmp_24": cmp_24,
+                        # For sorting all rows at the end if desired (oldest first)
+                        "sort_key": (int(year), months_order.index(qtr_month))
+                    })
                 
             all_data_rows.extend(company_rows)
             completed += 1
             if progress_callback:
                 progress_callback(sym, idx, total, completed, failed, "success")
         except Exception as e:
-            print(f"Exception processing {sym}: {e}")
+            print(f"Exception processing {sym_name}: {e}")
             failed += 1
             if progress_callback:
                 progress_callback(sym, idx, total, completed, failed, "failed")

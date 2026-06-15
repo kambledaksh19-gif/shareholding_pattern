@@ -784,30 +784,84 @@ def scrape_legacy_data(scrip_code, qtr_id, nav_url):
         
     return result
 
+def filter_years_with_change(compilation):
+    if not compilation or "years" not in compilation:
+        return compilation
+    
+    sorted_years = sorted(compilation["years"].keys(), key=lambda x: int(x))
+    filtered_years = {}
+    prev_pct = None
+    
+    for yr in sorted_years:
+        ydata = compilation["years"][yr]
+        pct = 0.0
+        for item in ydata.get("summary", []):
+            if "(A)" in item.get("category", ""):
+                pct = float(item.get("percentage", 0.0))
+                break
+                
+        if prev_pct is not None:
+            change = pct - prev_pct
+            if abs(change) > 0.0001:
+                filtered_years[yr] = ydata
+        prev_pct = pct
+        
+    compilation["years"] = filtered_years
+    return compilation
+
 def get_shareholding_pattern(symbol_or_code):
     """
     Main entry point: gets resolved symbol/scrip code, checks cache,
     scrapes all March endings, caches, and returns unified JSON structure.
     """
     scrip_code, company_name = resolve_scrip_code(symbol_or_code)
-    if not scrip_code:
-        return {"error": f"Could not resolve BSE symbol/scrip code for: {symbol_or_code}"}
-        
-    cache_path = os.path.join(CACHE_DIR, f"{scrip_code}_data.json")
     
-    # Check cache first
+    # Try loading cache first (even if resolve_scrip_code failed, it could be cached by symbol)
+    cache_code = scrip_code if scrip_code else str(symbol_or_code).strip().upper()
+    cache_path = os.path.join(CACHE_DIR, f"{cache_code}_data.json")
+    
     if os.path.exists(cache_path):
         print(f"Found cache at {cache_path}, loading...")
         try:
             with open(cache_path, "r", encoding="utf-8") as f:
-                return json.load(f)
+                compilation = json.load(f)
+                return filter_years_with_change(compilation)
         except Exception as e:
             print(f"Error reading cache: {e}. Will scrape fresh data.")
+            
+    if not scrip_code:
+        print(f"Could not resolve BSE scrip code for {symbol_or_code}. Trying Screener fallback...")
+        res_screener = scrape_screener_shareholding(symbol_or_code)
+        if res_screener:
+            filtered_annual = filter_years_with_change(res_screener["annual"])
+            try:
+                with open(cache_path, "w", encoding="utf-8") as f:
+                    json.dump(filtered_annual, f, indent=2, ensure_ascii=False)
+                q_cache_path = os.path.join(CACHE_DIR, f"{cache_code}_quarterly_data.json")
+                with open(q_cache_path, "w", encoding="utf-8") as f:
+                    json.dump(res_screener["quarterly"], f, indent=2, ensure_ascii=False)
+            except Exception as e:
+                print(f"Failed to cache Screener results: {e}")
+            return filtered_annual
+        return {"error": f"Could not resolve BSE symbol/scrip code for: {symbol_or_code}"}
             
     print(f"Scraping fresh shareholding data for {company_name} ({scrip_code})...")
     
     filings = fetch_filings_list(scrip_code)
     if not filings:
+        print(f"No shareholding pattern filings found on BSE for scrip code {scrip_code}. Trying Screener fallback...")
+        res_screener = scrape_screener_shareholding(symbol_or_code)
+        if res_screener:
+            filtered_annual = filter_years_with_change(res_screener["annual"])
+            try:
+                with open(cache_path, "w", encoding="utf-8") as f:
+                    json.dump(filtered_annual, f, indent=2, ensure_ascii=False)
+                q_cache_path = os.path.join(CACHE_DIR, f"{scrip_code}_quarterly_data.json")
+                with open(q_cache_path, "w", encoding="utf-8") as f:
+                    json.dump(res_screener["quarterly"], f, indent=2, ensure_ascii=False)
+            except Exception as e:
+                print(f"Failed to cache Screener results: {e}")
+            return filtered_annual
         return {"error": f"No shareholding pattern filings found on BSE for scrip code {scrip_code}."}
         
     march_endings = get_march_endings(filings)
@@ -865,6 +919,8 @@ def get_shareholding_pattern(symbol_or_code):
         # Polite spacing between requests to not hit rate limits
         time.sleep(1.0)
         
+    # Filter compilation at the end before saving
+    compilation = filter_years_with_change(compilation)
     # Save cache
     try:
         with open(cache_path, "w", encoding="utf-8") as f:
@@ -928,23 +984,52 @@ def get_quarterly_shareholding_pattern(symbol_or_code):
     Caches the unified JSON structure to cache/{scrip_code}_quarterly_data.json.
     """
     scrip_code, company_name = resolve_scrip_code(symbol_or_code)
-    if not scrip_code:
-        return {"error": f"Could not resolve BSE symbol/scrip code for: {symbol_or_code}"}
-        
-    cache_path = os.path.join(CACHE_DIR, f"{scrip_code}_quarterly_data.json")
     
-    # Load cache if available
-    compilation = {"scrip_code": scrip_code, "company_name": company_name, "symbol": "", "quarters": {}}
+    # Try loading cache first (even if resolve_scrip_code failed, it could be cached by symbol)
+    cache_code = scrip_code if scrip_code else str(symbol_or_code).strip().upper()
+    cache_path = os.path.join(CACHE_DIR, f"{cache_code}_quarterly_data.json")
+    
+    compilation = {"scrip_code": cache_code, "company_name": company_name or f"Company {cache_code}", "symbol": cache_code, "quarters": {}}
     if os.path.exists(cache_path):
         print(f"Found quarterly cache at {cache_path}, loading...")
         try:
             with open(cache_path, "r", encoding="utf-8") as f:
                 compilation = json.load(f)
+                # If cached compilation is valid and from Screener (which doesn't have numeric symbol usually), return it
+                if not scrip_code or compilation.get("symbol", "").startswith("NSE_") or not compilation.get("symbol", "").isdigit():
+                    return compilation
         except Exception as e:
             print(f"Error reading quarterly cache: {e}")
+
+    if not scrip_code:
+        print(f"Could not resolve BSE scrip code for {symbol_or_code}. Trying Screener fallback...")
+        res_screener = scrape_screener_shareholding(symbol_or_code)
+        if res_screener:
+            try:
+                with open(cache_path, "w", encoding="utf-8") as f:
+                    json.dump(res_screener["quarterly"], f, indent=2, ensure_ascii=False)
+                a_cache_path = os.path.join(CACHE_DIR, f"{cache_code}_data.json")
+                with open(a_cache_path, "w", encoding="utf-8") as f:
+                    json.dump(res_screener["annual"], f, indent=2, ensure_ascii=False)
+            except Exception as e:
+                print(f"Failed to cache Screener quarterly results: {e}")
+            return res_screener["quarterly"]
+        return {"error": f"Could not resolve BSE symbol/scrip code for: {symbol_or_code}"}
             
     filings = fetch_filings_list(scrip_code)
     if not filings:
+        print(f"No shareholding pattern filings found on BSE for scrip code {scrip_code}. Trying Screener fallback...")
+        res_screener = scrape_screener_shareholding(symbol_or_code)
+        if res_screener:
+            try:
+                with open(cache_path, "w", encoding="utf-8") as f:
+                    json.dump(res_screener["quarterly"], f, indent=2, ensure_ascii=False)
+                a_cache_path = os.path.join(CACHE_DIR, f"{scrip_code}_data.json")
+                with open(a_cache_path, "w", encoding="utf-8") as f:
+                    json.dump(res_screener["annual"], f, indent=2, ensure_ascii=False)
+            except Exception as e:
+                print(f"Failed to cache Screener quarterly results: {e}")
+            return res_screener["quarterly"]
         return {"error": f"No shareholding pattern filings found on BSE for scrip code {scrip_code}."}
         
     # Group filings by quarter (latest revision per calendar quarter)
@@ -1019,6 +1104,247 @@ def get_quarterly_shareholding_pattern(symbol_or_code):
         time.sleep(1.0)
         
     return compilation
+
+def clean_percent(val_str):
+    val_str = val_str.replace('%', '').replace(',', '').strip()
+    if not val_str or val_str == '-' or val_str == '--':
+        return 0.0
+    try:
+        return float(val_str)
+    except ValueError:
+        return 0.0
+
+def parse_screener_html(html_content):
+    soup = BeautifulSoup(html_content, 'html.parser')
+    
+    company_name = "Company"
+    h1 = soup.find('h1')
+    if h1:
+        company_name = h1.text.strip()
+        
+    sh_section = soup.find('section', id='shareholding')
+    if not sh_section:
+        return None
+        
+    tables = sh_section.find_all('table')
+    if not tables:
+        return None
+        
+    quarterly_table = None
+    annual_table = None
+    
+    for table in tables:
+        headers = [th.text.strip() for th in table.find_all('th')]
+        if not headers or len(headers) < 2:
+            continue
+        has_non_march = any(any(m in h for m in ['Jun', 'Sep', 'Dec']) for h in headers[1:])
+        if has_non_march:
+            quarterly_table = table
+        else:
+            if not annual_table:
+                annual_table = table
+                
+    if not quarterly_table and tables:
+        quarterly_table = tables[0]
+    if not annual_table and len(tables) > 1:
+        annual_table = tables[1]
+    elif not annual_table:
+        annual_table = quarterly_table
+        
+    def parse_table_data(table):
+        if not table:
+            return {}
+            
+        headers = [th.text.strip() for th in table.find_all('th')]
+        if not headers or len(headers) < 2:
+            return {}
+            
+        columns = headers[1:]
+        data_rows = {}
+        
+        for tr in table.find_all('tr'):
+            cells = [td.text.strip() for td in tr.find_all(['td', 'th'])]
+            if not cells or len(cells) < 2:
+                continue
+                
+            cat_name = re.sub(r'\s+', ' ', cells[0]).replace('+', '').strip()
+            if not cat_name or cat_name in columns:
+                continue
+                
+            values = cells[1:]
+            data_rows[cat_name] = values
+            
+        result_by_date = {}
+        for idx, date_str in enumerate(columns):
+            parts = date_str.split()
+            if len(parts) != 2:
+                continue
+            month_abbr, year_str = parts
+            
+            promoter_pct = 0.0
+            for cat_key, vals in data_rows.items():
+                if idx < len(vals):
+                    val_str = vals[idx]
+                    pct = clean_percent(val_str)
+                    if 'promoter' in cat_key.lower():
+                        promoter_pct = pct
+                        
+            public_pct = 100.0 - promoter_pct
+            
+            result_by_date[date_str] = {
+                "year": year_str,
+                "qtr_month": month_abbr[:3],
+                "promoter": promoter_pct,
+                "public": public_pct
+            }
+            
+        return result_by_date
+
+    quarters_data = parse_table_data(quarterly_table)
+    years_data = parse_table_data(annual_table)
+    
+    return {
+        "company_name": company_name,
+        "quarters": quarters_data,
+        "years": years_data
+    }
+
+def scrape_screener_shareholding(symbol_or_code):
+    symbol = str(symbol_or_code).strip().upper()
+    if ":" in symbol:
+        symbol = symbol.split(":")[-1].strip()
+        
+    url = f"https://www.screener.in/company/{symbol}/"
+    print(f"Scraping from Screener.in fallback: {url}")
+    try:
+        r = requests.get(url, headers=HEADERS, timeout=15)
+        if r.status_code != 200:
+            print(f"Failed to fetch Screener page for {symbol}. Status code: {r.status_code}")
+            return None
+            
+        html = r.text
+        parsed = parse_screener_html(html)
+        if not parsed:
+            print(f"Failed to parse Screener HTML for {symbol}")
+            return None
+            
+        compilation_quarterly = {
+            "scrip_code": symbol,
+            "company_name": parsed["company_name"],
+            "symbol": symbol,
+            "scraped_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "quarters": {}
+        }
+        
+        compilation_annual = {
+            "scrip_code": symbol,
+            "company_name": parsed["company_name"],
+            "symbol": symbol,
+            "scraped_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "years": {}
+        }
+        
+        for date_str, qdata in parsed["quarters"].items():
+            year = qdata["year"]
+            qtr_month = qdata["qtr_month"]
+            promoter_pct = qdata["promoter"]
+            public_pct = qdata["public"]
+            key_str = f"{year}_{qtr_month}"
+            
+            compilation_quarterly["quarters"][key_str] = {
+                "year": year,
+                "qtr_month": qtr_month,
+                "qtr_id": 0.0,
+                "qtr_label": f"{qtr_month} {year}",
+                "summary": [
+                    {
+                        "category": "(A) Promoter & Promoter Group",
+                        "shares": 0,
+                        "percentage": promoter_pct,
+                        "demat_shares": 0,
+                        "pledged_shares": 0,
+                        "pledged_percentage": 0.0,
+                        "no_shareholders": 0
+                    },
+                    {
+                        "category": "(B) Public",
+                        "shares": 0,
+                        "percentage": public_pct,
+                        "demat_shares": 0,
+                        "no_shareholders": 0
+                    },
+                    {
+                        "category": "(C) Non Promoter- Non Public",
+                        "shares": 0,
+                        "percentage": 0.0,
+                        "demat_shares": 0,
+                        "no_shareholders": 0
+                    },
+                    {
+                        "category": "Grand Total",
+                        "shares": 0,
+                        "percentage": 100.0,
+                        "demat_shares": 0,
+                        "no_shareholders": 0
+                    }
+                ],
+                "promoter": [],
+                "public": [],
+                "non_promoter": []
+            }
+            
+        for date_str, ydata in parsed["years"].items():
+            year = ydata["year"]
+            promoter_pct = ydata["promoter"]
+            public_pct = ydata["public"]
+            
+            compilation_annual["years"][str(year)] = {
+                "qtr_id": 0.0,
+                "qtr_label": f"March {year}",
+                "summary": [
+                    {
+                        "category": "(A) Promoter & Promoter Group",
+                        "shares": 0,
+                        "percentage": promoter_pct,
+                        "demat_shares": 0,
+                        "pledged_shares": 0,
+                        "pledged_percentage": 0.0,
+                        "no_shareholders": 0
+                    },
+                    {
+                        "category": "(B) Public",
+                        "shares": 0,
+                        "percentage": public_pct,
+                        "demat_shares": 0,
+                        "no_shareholders": 0
+                    },
+                    {
+                        "category": "(C) Non Promoter- Non Public",
+                        "shares": 0,
+                        "percentage": 0.0,
+                        "demat_shares": 0,
+                        "no_shareholders": 0
+                    },
+                    {
+                        "category": "Grand Total",
+                        "shares": 0,
+                        "percentage": 100.0,
+                        "demat_shares": 0,
+                        "no_shareholders": 0
+                    }
+                ],
+                "promoter": [],
+                "public": [],
+                "non_promoter": []
+            }
+            
+        return {
+            "quarterly": compilation_quarterly,
+            "annual": compilation_annual
+        }
+    except Exception as e:
+        print(f"Error scraping Screener fallback for {symbol_or_code}: {e}")
+        return None
 
 if __name__ == "__main__":
     # Test run

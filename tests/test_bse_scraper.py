@@ -72,12 +72,20 @@ class TestBSEScraper(unittest.TestCase):
         # Test CSV with "symbol" header
         csv_data = "Symbol,Company Name\nSBIN,State Bank\nTCS,Tata Consultancy Services\nINFY,Infosys"
         symbols = extract_symbols_from_csv(csv_data)
-        self.assertEqual(symbols, ["SBIN", "TCS", "INFY"])
+        self.assertEqual(symbols, [
+            {"bse": "State Bank", "nse": "SBIN"},
+            {"bse": "Tata Consultancy Services", "nse": "TCS"},
+            {"bse": "Infosys", "nse": "INFY"}
+        ])
         
         # Test CSV without headers (should take first column)
         csv_data_no_header = "500112\n500209\n500325"
         symbols_no_header = extract_symbols_from_csv(csv_data_no_header)
-        self.assertEqual(symbols_no_header, ["500112", "500209", "500325"])
+        self.assertEqual(symbols_no_header, [
+            {"bse": "500112", "nse": "500112"},
+            {"bse": "500209", "nse": "500209"},
+            {"bse": "500325", "nse": "500325"}
+        ])
 
     def test_run_batch_compilation(self):
         """
