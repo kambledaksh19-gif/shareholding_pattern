@@ -191,6 +191,19 @@
             
             <p class="batch-desc">Upload a CSV file containing BSE listed company symbols or 6-digit scrip codes. The system will compile historical quarterly shareholding patterns along with stock price performance (CMP after one month, CMP after 18 months, CMP after 24 months) and export everything into a single consolidated Excel sheet.</p>
             
+            <div class="save-path-wrapper" style="margin-bottom: 24px; text-align: left;">
+                <label for="save-path-input" style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px; color: var(--text-secondary);">Excel Save Path (Absolute path on your computer):</label>
+                <div style="position: relative; display: flex; align-items: center;">
+                    <i class="fa-solid fa-folder-open" style="position: absolute; left: 14px; color: var(--text-muted);"></i>
+                    <input type="text" id="save-path-input" 
+                           value="C:\Users\kambl\OneDrive\Documents\Shareholding pattern\compiled_result_quaterly.xlsx" 
+                           placeholder="e.g., C:\Users\kambl\OneDrive\Documents\Shareholding pattern\compiled_result_quaterly.xlsx" 
+                           style="width: 100%; padding: 12px 14px 12px 42px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); font-family: inherit; font-size: 14px; transition: border-color 0.2s;"
+                           onfocus="this.style.borderColor='var(--primary)'"
+                           onblur="this.style.borderColor='var(--border-color)'">
+                </div>
+            </div>
+
             <div class="drag-drop-zone" id="drop-zone">
                 <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
                 <h3>Drag & Drop CSV file here</h3>
@@ -223,6 +236,15 @@
                      </div>
                 </div>
                 
+                <div id="batch-errors-container" class="batch-errors-card hidden" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 16px; text-align: left;">
+                    <h4 style="color: #ef4444; margin-bottom: 10px; font-size: 14px; font-weight: 600;">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Compilation Errors / Failed Companies
+                    </h4>
+                    <div id="batch-errors-list" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; font-size: 13px;">
+                        <!-- Failed symbols and their logs will be dynamically injected here -->
+                    </div>
+                </div>
+
                 <div id="batch-loader" class="batch-loading-indicator">
                     <div class="mini-spinner"></div>
                     <span id="batch-status-message">Scraping data from BSE India...</span>

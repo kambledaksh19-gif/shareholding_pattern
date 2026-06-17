@@ -499,6 +499,9 @@ const batchLoader = document.getElementById("batch-loader");
 const batchStatusMessage = document.getElementById("batch-status-message");
 const batchDownloadBtn = document.getElementById("batch-download-btn");
 const batchResetBtn = document.getElementById("batch-reset-btn");
+const savePathInput = document.getElementById("save-path-input");
+const batchErrorsContainer = document.getElementById("batch-errors-container");
+const batchErrorsList = document.getElementById("batch-errors-list");
 
 let batchPollingInterval = null;
 let activeBatchJobId = null;
@@ -561,8 +564,19 @@ async function uploadCSV(file) {
         return;
     }
     
+    const savePath = savePathInput.value.trim();
+    if (!savePath) {
+        alert("Please enter a valid absolute path to save the Excel file.");
+        return;
+    }
+    if (!savePath.toLowerCase().endsWith(".xlsx")) {
+        alert("The save path must end with '.xlsx'.");
+        return;
+    }
+    
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("save_path", savePath);
     
     dropZone.classList.add("hidden");
     batchProgressContainer.classList.remove("hidden");
@@ -576,6 +590,8 @@ async function uploadCSV(file) {
     batchStatusMessage.innerText = "Initializing batch job...";
     batchDownloadBtn.classList.add("hidden");
     batchResetBtn.classList.add("hidden");
+    batchErrorsContainer.classList.add("hidden");
+    batchErrorsList.innerHTML = "";
     
     try {
         const response = await fetch("/api/batch", {
@@ -627,6 +643,34 @@ function startBatchPolling(jobId) {
             batchProgressBar.style.width = `${pct}%`;
             batchProgressText.innerText = `${pct}%`;
             
+            // Render company errors in real-time
+            if (data.errors && data.errors.length > 0) {
+                batchErrorsContainer.classList.remove("hidden");
+                batchErrorsList.innerHTML = "";
+                data.errors.forEach(item => {
+                    const div = document.createElement("div");
+                    div.style.background = "rgba(239, 68, 68, 0.08)";
+                    div.style.border = "1px solid rgba(239, 68, 68, 0.2)";
+                    div.style.borderRadius = "6px";
+                    div.style.padding = "10px 12px";
+                    div.style.marginBottom = "8px";
+                    div.style.display = "flex";
+                    div.style.flexDirection = "column";
+                    div.style.gap = "4px";
+
+                    div.innerHTML = `
+                        <div style="font-weight: 600; color: #f87171; display: flex; justify-content: space-between;">
+                            <span><i class="fa-solid fa-circle-xmark"></i> ${item.symbol}</span>
+                        </div>
+                        <div style="color: var(--text-secondary); font-family: monospace; font-size: 12px; white-space: pre-wrap;">${item.error}</div>
+                    `;
+                    batchErrorsList.appendChild(div);
+                });
+            } else {
+                batchErrorsContainer.classList.add("hidden");
+                batchErrorsList.innerHTML = "";
+            }
+            
             if (data.status === "processing") {
                 batchCurrentSymbol.innerText = `Currently processing: ${data.current_symbol || 'Please wait...'}`;
                 batchStatusMessage.innerText = `Scraping and compiling ${processed} of ${data.total} companies...`;
@@ -666,6 +710,8 @@ function resetBatchView() {
     csvFileInput.value = "";
     dropZone.classList.remove("hidden");
     batchProgressContainer.classList.add("hidden");
+    batchErrorsContainer.classList.add("hidden");
+    batchErrorsList.innerHTML = "";
 }
 
 // Switch button listeners

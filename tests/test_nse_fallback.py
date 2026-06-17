@@ -89,5 +89,100 @@ class TestNSEFallback(unittest.TestCase):
         if os.path.exists(output_xlsx):
             os.remove(output_xlsx)
 
+    def test_constant_promoter_holding_fallback(self):
+        """
+        Verify that a company with constant promoter holdings (zero change) is written as a single row.
+        """
+        output_xlsx = os.path.join("cache", "test_constant_promoter.xlsx")
+        if os.path.exists(output_xlsx):
+            os.remove(output_xlsx)
+            
+        from unittest.mock import patch
+        
+        mock_data = {
+            "company_name": "Test Constant Company",
+            "scrip_code": "500000",
+            "symbol": "TCC",
+            "quarters": {
+                "2023-03": {"year": "2023", "qtr_month": "Mar", "summary": [{"category": "Promoter & Group (A)", "percentage": 50.0}]},
+                "2023-06": {"year": "2023", "qtr_month": "Jun", "summary": [{"category": "Promoter & Group (A)", "percentage": 50.0}]},
+            }
+        }
+        
+        with patch('batch_process.get_quarterly_shareholding_pattern', return_value=mock_data), \
+             patch('batch_process.PriceFetcher') as mock_fetcher:
+             
+            mock_fetcher.return_value.get_price_on_date.return_value = 100.0
+            
+            completed, failed = run_batch_compilation(["500000"], output_xlsx)
+            self.assertEqual(completed, 1)
+            self.assertEqual(failed, 0)
+            self.assertTrue(os.path.exists(output_xlsx))
+            
+            import openpyxl
+            wb = openpyxl.load_workbook(output_xlsx)
+            ws = wb.active
+            
+            self.assertEqual(ws.cell(row=2, column=1).value, "Test Constant Company")
+            self.assertEqual(ws.cell(row=2, column=2).value, 0.0) # change
+            self.assertEqual(ws.cell(row=2, column=3).value, "Jun-2023") # latest quarter
+            self.assertIsNone(ws.cell(row=3, column=1).value)
+            
+        if os.path.exists(output_xlsx):
+            os.remove(output_xlsx)
+
+    def test_incremental_saving(self):
+        """
+        Verify that Excel compilation progress is saved incrementally after each company is compiled.
+        """
+        output_xlsx = os.path.join("cache", "test_incremental.xlsx")
+        if os.path.exists(output_xlsx):
+            os.remove(output_xlsx)
+            
+        from unittest.mock import patch
+        
+        mock_data_1 = {
+            "company_name": "Company One",
+            "scrip_code": "500001",
+            "symbol": "CO1",
+            "quarters": {
+                "2023-03": {"year": "2023", "qtr_month": "Mar", "summary": [{"category": "Promoter & Group (A)", "percentage": 50.0}]}
+            }
+        }
+        mock_data_2 = {
+            "company_name": "Company Two",
+            "scrip_code": "500002",
+            "symbol": "CO2",
+            "quarters": {
+                "2023-03": {"year": "2023", "qtr_month": "Mar", "summary": [{"category": "Promoter & Group (A)", "percentage": 60.0}]}
+            }
+        }
+        
+        with patch('batch_process.get_quarterly_shareholding_pattern') as mock_get, \
+             patch('batch_process.PriceFetcher') as mock_fetcher, \
+             patch('batch_process.save_excel_progress') as mock_save:
+             
+            mock_get.side_effect = [mock_data_1, mock_data_2]
+            mock_fetcher.return_value.get_price_on_date.return_value = 100.0
+            
+            completed, failed = run_batch_compilation(["500001", "500002"], output_xlsx)
+            self.assertEqual(completed, 2)
+            self.assertEqual(failed, 0)
+            
+            self.assertEqual(mock_save.call_count, 2)
+            
+            first_call_args = mock_save.call_args_list[0][0]
+            second_call_args = mock_save.call_args_list[1][0]
+            
+            self.assertEqual(len(first_call_args[0]), 1)
+            self.assertEqual(first_call_args[0][0]["company_name"], "Company One")
+            
+            self.assertEqual(len(second_call_args[0]), 2)
+            self.assertEqual(second_call_args[0][0]["company_name"], "Company One")
+            self.assertEqual(second_call_args[0][1]["company_name"], "Company Two")
+            
+        if os.path.exists(output_xlsx):
+            os.remove(output_xlsx)
+
 if __name__ == "__main__":
     unittest.main()

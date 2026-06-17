@@ -7,7 +7,7 @@ import zipfile
 # Add current directory to path to allow importing local modules on hosting environments
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
-from fastapi import FastAPI, HTTPException, Query, BackgroundTasks, UploadFile, File
+from fastapi import FastAPI, HTTPException, Query, BackgroundTasks, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -123,13 +123,18 @@ async def api_download(scripcode: str = Query(..., description="The 6-digit BSE 
 def process_batch_job(job_id: str, symbols: list, output_xlsx_path: str):
     batch_jobs[job_id]["status"] = "processing"
     
-    def progress_callback(sym, idx, total, completed_count, failed_count, status_str):
+    def progress_callback(sym, idx, total, completed_count, failed_count, status_str, error_msg=None):
         sym_name = sym
         if isinstance(sym, dict):
             sym_name = sym.get("nse") or sym.get("bse") or ""
         batch_jobs[job_id]["current_symbol"] = sym_name
         batch_jobs[job_id]["completed"] = completed_count
         batch_jobs[job_id]["failed"] = failed_count
+        if status_str == "failed":
+            batch_jobs[job_id]["errors"].append({
+                "symbol": sym_name,
+                "error": error_msg or "Unknown error occurred"
+            })
 
     try:
         completed, failed = run_batch_compilation(symbols, output_xlsx_path, progress_callback)
@@ -143,7 +148,11 @@ def process_batch_job(job_id: str, symbols: list, output_xlsx_path: str):
         batch_jobs[job_id]["error"] = str(e)
 
 @app.post("/api/batch")
-async def api_batch_upload(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+async def api_batch_upload(
+    background_tasks: BackgroundTasks, 
+    file: UploadFile = File(...),
+    save_path: str = Form(None)
+):
     """
     Uploads a CSV file with stock symbols or scrip codes, parses it,
     and starts a background compilation task.
@@ -164,7 +173,24 @@ async def api_batch_upload(background_tasks: BackgroundTasks, file: UploadFile =
     job_id = str(uuid.uuid4())
     job_dir = os.path.join(BATCH_JOBS_DIR, job_id)
     os.makedirs(job_dir, exist_ok=True)
-    xlsx_path = os.path.join(job_dir, "compiled_quarterly_shareholding_performance.xlsx")
+    
+    # Custom Save Path Validation
+    xlsx_path = None
+    if save_path:
+        save_path = save_path.strip()
+        if not save_path.lower().endswith(".xlsx"):
+            raise HTTPException(status_code=400, detail="Save path must end with .xlsx")
+        
+        # Verify parent directory is writeable/creatable
+        dir_name = os.path.dirname(save_path)
+        if dir_name:
+            try:
+                os.makedirs(dir_name, exist_ok=True)
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Invalid or unwritable save path directory: {e}")
+        xlsx_path = save_path
+    else:
+        xlsx_path = os.path.join(job_dir, "compiled_quarterly_shareholding_performance.xlsx")
     
     batch_jobs[job_id] = {
         "job_id": job_id,
@@ -174,7 +200,8 @@ async def api_batch_upload(background_tasks: BackgroundTasks, file: UploadFile =
         "failed": 0,
         "current_symbol": "",
         "zip_path": xlsx_path,  # Keep the dict key as zip_path or change to xlsx_path to prevent UI breakout
-        "error": None
+        "error": None,
+        "errors": []
     }
     
     background_tasks.add_task(process_batch_job, job_id, symbols, xlsx_path)
@@ -197,7 +224,8 @@ async def api_batch_status(job_id: str = Query(..., description="The unique batc
         "completed": job["completed"],
         "failed": job["failed"],
         "current_symbol": job["current_symbol"],
-        "error": job["error"]
+        "error": job["error"],
+        "errors": job.get("errors", [])
     }
 
 @app.get("/api/batch/download")
