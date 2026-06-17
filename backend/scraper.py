@@ -7,7 +7,10 @@ from bs4 import BeautifulSoup
 from bsedata.bse import BSE
 
 # Create cache directory if it doesn't exist
-CACHE_DIR = "cache"
+if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+    CACHE_DIR = "/tmp/cache"
+else:
+    CACHE_DIR = "cache"
 os.makedirs(CACHE_DIR, exist_ok=True)
 
 HEADERS = {

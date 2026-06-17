@@ -32,7 +32,10 @@ app.add_middleware(
 )
 
 # Directory configs
-CACHE_DIR = "cache"
+if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+    CACHE_DIR = "/tmp/cache"
+else:
+    CACHE_DIR = "cache"
 os.makedirs(CACHE_DIR, exist_ok=True)
 STATIC_DIR = "static"
 os.makedirs(STATIC_DIR, exist_ok=True)
