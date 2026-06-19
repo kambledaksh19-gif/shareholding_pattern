@@ -895,32 +895,42 @@ def get_shareholding_pattern(symbol_or_code):
         "years": {}
     }
     
-    # We loop through years and fetch
+    # Identify missing years
+    missing_years = []
     for year, filing in sorted(march_endings.items(), reverse=True):
-        qtr_id = float(filing.get("qtrid", 0.0))
-        qtr_label = filing.get("qtr", f"March {year}")
-        nav_url = filing.get("navigateurl", "")
-        
-        print(f"\nProcessing Year: {year} | Qtr ID: {qtr_id} | Label: {qtr_label}")
-        
-        if qtr_id >= 88.0:
-            # Modern JSON format
-            year_data = fetch_modern_data(scrip_code, qtr_id)
-        else:
-            # Legacy ASPX format
-            year_data = scrape_legacy_data(scrip_code, qtr_id, nav_url)
-            
-        compilation["years"][str(year)] = {
-            "qtr_id": qtr_id,
-            "qtr_label": qtr_label,
-            "summary": year_data["summary"],
-            "promoter": year_data["promoter"],
-            "public": year_data["public"],
-            "non_promoter": year_data["non_promoter"]
-        }
-        
-        # Polite spacing between requests to not hit rate limits
-        time.sleep(1.0)
+        if str(year) not in compilation["years"]:
+            missing_years.append((year, filing))
+
+    if missing_years:
+        import concurrent.futures
+
+        def scrape_single_year(item):
+            year, filing = item
+            qtr_id = float(filing.get("qtrid", 0.0))
+            qtr_label = filing.get("qtr", f"March {year}")
+            nav_url = filing.get("navigateurl", "")
+
+            print(f"Scraping Annual: {year} | Qtr ID: {qtr_id} | Label: {qtr_label}")
+            if qtr_id >= 88.0:
+                year_data = fetch_modern_data(scrip_code, qtr_id)
+            else:
+                year_data = scrape_legacy_data(scrip_code, qtr_id, nav_url)
+
+            time.sleep(0.2)
+            return year, qtr_id, qtr_label, year_data
+
+        max_workers = min(len(missing_years), 4)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            results = list(executor.map(scrape_single_year, missing_years))
+            for year, qtr_id, qtr_label, year_data in results:
+                compilation["years"][str(year)] = {
+                    "qtr_id": qtr_id,
+                    "qtr_label": qtr_label,
+                    "summary": year_data["summary"],
+                    "promoter": year_data["promoter"],
+                    "public": year_data["public"],
+                    "non_promoter": year_data["non_promoter"]
+                }
         
     # Filter compilation at the end before saving
     compilation = filter_years_with_change(compilation)
@@ -1064,47 +1074,57 @@ def get_quarterly_shareholding_pattern(symbol_or_code):
         compilation["quarters"] = {}
         
     # Loop and fetch each quarter if not already cached
-    has_new_scrape = False
+    missing_quarters = []
     for (year, qtr_month), filing in sorted(quarterly_filings.items(), key=lambda x: (x[0][0], ['Mar', 'Jun', 'Sep', 'Dec'].index(x[0][1])), reverse=True):
         key_str = f"{year}_{qtr_month}"
-        
-        # Check if already cached
-        if key_str in compilation["quarters"]:
-            continue
-            
-        qtr_id = float(filing.get("qtrid", 0.0))
-        qtr_label = filing.get("qtr", f"{qtr_month} {year}")
-        nav_url = filing.get("navigateurl", "")
-        
-        print(f"Scraping Quarter: {year} {qtr_month} | Qtr ID: {qtr_id} | Label: {qtr_label}")
-        
-        if qtr_id >= 88.0:
-            year_data = fetch_modern_data(scrip_code, qtr_id)
-        else:
-            year_data = scrape_legacy_data(scrip_code, qtr_id, nav_url)
-            
-        compilation["quarters"][key_str] = {
-            "year": year,
-            "qtr_month": qtr_month,
-            "qtr_id": qtr_id,
-            "qtr_label": qtr_label,
-            "summary": year_data["summary"],
-            "promoter": year_data["promoter"],
-            "public": year_data["public"],
-            "non_promoter": year_data["non_promoter"]
-        }
-        has_new_scrape = True
-        
-        # Save cache incrementally
-        try:
-            with open(cache_path, "w", encoding="utf-8") as f:
-                json.dump(compilation, f, indent=2, ensure_ascii=False)
-            print(f"Saved incremental quarterly cache to {cache_path}")
-        except Exception as e:
-            print(f"Failed to save incremental quarterly cache: {e}")
-            
-        # Polite spacing between requests
-        time.sleep(1.0)
+        if key_str not in compilation["quarters"]:
+            missing_quarters.append(((year, qtr_month), filing))
+
+    if missing_quarters:
+        import concurrent.futures
+
+        def scrape_single_quarter(item):
+            (year, qtr_month), filing = item
+            qtr_id = float(filing.get("qtrid", 0.0))
+            qtr_label = filing.get("qtr", f"{qtr_month} {year}")
+            nav_url = filing.get("navigateurl", "")
+
+            print(f"Scraping Quarter: {year} {qtr_month} | Qtr ID: {qtr_id} | Label: {qtr_label}")
+            if qtr_id >= 88.0:
+                year_data = fetch_modern_data(scrip_code, qtr_id)
+            else:
+                year_data = scrape_legacy_data(scrip_code, qtr_id, nav_url)
+
+            time.sleep(0.2)
+            return {
+                "key_str": f"{year}_{qtr_month}",
+                "data": {
+                    "year": year,
+                    "qtr_month": qtr_month,
+                    "qtr_id": qtr_id,
+                    "qtr_label": qtr_label,
+                    "summary": year_data["summary"],
+                    "promoter": year_data["promoter"],
+                    "public": year_data["public"],
+                    "non_promoter": year_data["non_promoter"]
+                }
+            }
+
+        max_workers = min(len(missing_quarters), 4)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            results = list(executor.map(scrape_single_quarter, missing_quarters))
+            for res in results:
+                compilation["quarters"][res["key_str"]] = res["data"]
+                has_new_scrape = True
+
+        # Save cache
+        if has_new_scrape:
+            try:
+                with open(cache_path, "w", encoding="utf-8") as f:
+                    json.dump(compilation, f, indent=2, ensure_ascii=False)
+                print(f"Saved completed quarterly cache to {cache_path}")
+            except Exception as e:
+                print(f"Failed to save quarterly cache: {e}")
         
     return compilation
 

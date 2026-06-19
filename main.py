@@ -46,7 +46,7 @@ os.makedirs(BATCH_JOBS_DIR, exist_ok=True)
 batch_jobs = {}
 
 @app.get("/api/search")
-async def api_search(symbol: str = Query(..., description="The symbol or name to search on BSE")):
+def api_search(symbol: str = Query(..., description="The symbol or name to search on BSE")):
     """
     Searches for listed companies on BSE.
     """
@@ -54,7 +54,7 @@ async def api_search(symbol: str = Query(..., description="The symbol or name to
     return results
 
 @app.get("/api/shareholding")
-async def api_shareholding(scripcode: str = Query(..., description="The 6-digit BSE scrip code")):
+def api_shareholding(scripcode: str = Query(..., description="The 6-digit BSE scrip code")):
     """
     Retrieves the complete historical shareholding pattern.
     Uses cached data if available, otherwise initiates a fresh scrape.
@@ -72,7 +72,7 @@ async def api_shareholding(scripcode: str = Query(..., description="The 6-digit 
     return data
 
 @app.get("/api/download")
-async def api_download(scripcode: str = Query(..., description="The 6-digit BSE scrip code or symbol")):
+def api_download(scripcode: str = Query(..., description="The 6-digit BSE scrip code or symbol")):
     """
     Generates and downloads the consolidated quarterly performance Excel compilation.
     """

@@ -72,7 +72,9 @@ class PriceFetcher:
         best_start_date = None
         best_history = None
         
-        for ticker_opt in ticker_options:
+        import concurrent.futures
+
+        def fetch_single_ticker(ticker_opt):
             print(f"Attempting to fetch price history for: {ticker_opt}")
             try:
                 session = get_session()
@@ -82,12 +84,23 @@ class PriceFetcher:
                     df.index = df.index.tz_localize(None)
                     start_date = df.index.min()
                     print(f"  Ticker {ticker_opt} start date: {start_date.strftime('%Y-%m-%d')}, shape: {df.shape}")
-                    if best_start_date is None or start_date < best_start_date:
-                        best_start_date = start_date
-                        best_ticker = ticker_opt
-                        best_history = df
+                    return ticker_opt, start_date, df
             except Exception as e:
                 print(f"Error fetching price history for {ticker_opt}: {e}")
+            return None
+
+        if ticker_options:
+            max_workers = min(len(ticker_options), 4)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+                # Use list to force execution of all threads and retrieve results
+                results = list(executor.map(fetch_single_ticker, ticker_options))
+                for res in results:
+                    if res:
+                        ticker_opt, start_date, df = res
+                        if best_start_date is None or start_date < best_start_date:
+                            best_start_date = start_date
+                            best_ticker = ticker_opt
+                            best_history = df
                 
         if best_ticker:
             print(f"Selected best ticker: {best_ticker} (earliest date: {best_start_date.strftime('%Y-%m-%d')})")
