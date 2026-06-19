@@ -828,6 +828,14 @@ def get_shareholding_pattern(symbol_or_code):
         try:
             with open(cache_path, "r", encoding="utf-8") as f:
                 compilation = json.load(f)
+                
+                # Append source suffix (B/N) dynamically if missing
+                comp_name = compilation.get("company_name", "")
+                if comp_name and not comp_name.endswith(" (N)") and not comp_name.endswith(" (B)"):
+                    s_code = compilation.get("scrip_code", "")
+                    suffix = " (B)" if s_code and s_code.isdigit() and len(s_code) == 6 else " (N)"
+                    compilation["company_name"] = f"{comp_name}{suffix}"
+                    
                 return filter_years_with_change(compilation)
         except Exception as e:
             print(f"Error reading cache: {e}. Will scrape fresh data.")
@@ -887,9 +895,13 @@ def get_shareholding_pattern(symbol_or_code):
             else:
                 symbol = f"BSE_{scrip_code}"
             
+    display_name = company_name or f"Company {scrip_code}"
+    if not display_name.endswith(" (N)") and not display_name.endswith(" (B)"):
+        display_name = f"{display_name} (B)"
+
     compilation = {
         "scrip_code": scrip_code,
-        "company_name": company_name,
+        "company_name": display_name,
         "symbol": symbol,
         "scraped_at": time.strftime("%Y-%m-%d %H:%M:%S"),
         "years": {}
@@ -1002,12 +1014,24 @@ def get_quarterly_shareholding_pattern(symbol_or_code):
     cache_code = scrip_code if scrip_code else str(symbol_or_code).strip().upper()
     cache_path = os.path.join(CACHE_DIR, f"{cache_code}_quarterly_data.json")
     
-    compilation = {"scrip_code": cache_code, "company_name": company_name or f"Company {cache_code}", "symbol": cache_code, "quarters": {}}
+    display_name = company_name or f"Company {cache_code}"
+    if not display_name.endswith(" (N)") and not display_name.endswith(" (B)"):
+        display_name = f"{display_name} (B)"
+
+    compilation = {"scrip_code": cache_code, "company_name": display_name, "symbol": cache_code, "quarters": {}}
     if os.path.exists(cache_path):
         print(f"Found quarterly cache at {cache_path}, loading...")
         try:
             with open(cache_path, "r", encoding="utf-8") as f:
                 compilation = json.load(f)
+                
+                # Append source suffix (B/N) dynamically if missing
+                comp_name = compilation.get("company_name", "")
+                if comp_name and not comp_name.endswith(" (N)") and not comp_name.endswith(" (B)"):
+                    s_code = compilation.get("scrip_code", "")
+                    suffix = " (B)" if s_code and s_code.isdigit() and len(s_code) == 6 else " (N)"
+                    compilation["company_name"] = f"{comp_name}{suffix}"
+                    
                 # If cached compilation is valid and from Screener (which doesn't have numeric symbol usually), return it
                 if not scrip_code or compilation.get("symbol", "").startswith("NSE_") or not compilation.get("symbol", "").isdigit():
                     return compilation
@@ -1251,9 +1275,13 @@ def scrape_screener_shareholding(symbol_or_code):
             print(f"Failed to parse Screener HTML for {symbol}")
             return None
             
+        display_name = parsed["company_name"]
+        if not display_name.endswith(" (N)") and not display_name.endswith(" (B)"):
+            display_name = f"{display_name} (N)"
+
         compilation_quarterly = {
             "scrip_code": symbol,
-            "company_name": parsed["company_name"],
+            "company_name": display_name,
             "symbol": symbol,
             "scraped_at": time.strftime("%Y-%m-%d %H:%M:%S"),
             "quarters": {}
@@ -1261,7 +1289,7 @@ def scrape_screener_shareholding(symbol_or_code):
         
         compilation_annual = {
             "scrip_code": symbol,
-            "company_name": parsed["company_name"],
+            "company_name": display_name,
             "symbol": symbol,
             "scraped_at": time.strftime("%Y-%m-%d %H:%M:%S"),
             "years": {}
