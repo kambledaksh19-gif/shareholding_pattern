@@ -240,8 +240,8 @@ async def api_batch_download(job_id: str = Query(..., description="The unique ba
         raise HTTPException(status_code=404, detail="Batch job not found.")
         
     job = batch_jobs[job_id]
-    if job["status"] != "completed":
-        raise HTTPException(status_code=400, detail=f"Job is not completed yet (status: {job['status']}).")
+    if job["status"] == "pending":
+        raise HTTPException(status_code=400, detail="Job has not started processing yet.")
         
     xlsx_path = job["zip_path"]  # stored in the zip_path field
     if not os.path.exists(xlsx_path):

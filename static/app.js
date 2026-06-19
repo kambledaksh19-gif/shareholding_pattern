@@ -589,6 +589,7 @@ async function uploadCSV(file) {
     batchLoader.classList.remove("hidden");
     batchStatusMessage.innerText = "Initializing batch job...";
     batchDownloadBtn.classList.add("hidden");
+    batchDownloadBtn.innerHTML = '<i class="fa-solid fa-file-excel"></i> Download Excel Report';
     batchResetBtn.classList.add("hidden");
     batchErrorsContainer.classList.add("hidden");
     batchErrorsList.innerHTML = "";
@@ -674,6 +675,11 @@ function startBatchPolling(jobId) {
             if (data.status === "processing") {
                 batchCurrentSymbol.innerText = `Currently processing: ${data.current_symbol || 'Please wait...'}`;
                 batchStatusMessage.innerText = `Scraping and compiling ${processed} of ${data.total} companies...`;
+                if (data.completed > 0) {
+                    batchDownloadBtn.href = `/api/batch/download?job_id=${encodeURIComponent(jobId)}`;
+                    batchDownloadBtn.innerHTML = '<i class="fa-solid fa-file-excel"></i> Download Partial Excel Report';
+                    batchDownloadBtn.classList.remove("hidden");
+                }
             } else if (data.status === "completed") {
                 clearInterval(batchPollingInterval);
                 batchCurrentSymbol.innerText = "Compilation complete!";
@@ -682,6 +688,7 @@ function startBatchPolling(jobId) {
                 batchStatusMessage.innerText = `Successfully compiled ${data.completed} companies!`;
                 batchLoader.classList.add("hidden");
                 batchDownloadBtn.href = `/api/batch/download?job_id=${encodeURIComponent(jobId)}`;
+                batchDownloadBtn.innerHTML = '<i class="fa-solid fa-file-excel"></i> Download Excel Report';
                 batchDownloadBtn.classList.remove("hidden");
                 batchResetBtn.classList.remove("hidden");
             } else if (data.status === "failed") {
