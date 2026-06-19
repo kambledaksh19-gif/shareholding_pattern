@@ -115,6 +115,11 @@ class PriceFetcher:
             return None
             
         name = str(company_name).upper()
+        # Remove source indicators if present
+        for suffix in [" (B)", " (N)", "(B)", "(N)"]:
+            if name.endswith(suffix):
+                name = name[:-len(suffix)]
+                
         # Remove common corporate suffixes to improve search matching
         for suffix in [" LTD", " LIMITED", " CORP", " CORPORATION", " INDIA"]:
             name = name.replace(suffix, "")
