@@ -258,6 +258,29 @@ async def api_batch_download(job_id: str = Query(..., description="The unique ba
         }
     )
 
+@app.get("/api/fetch-prices")
+def api_fetch_prices(
+    symbol: str = Query(None),
+    company_name: str = Query(None)
+):
+    from backend.price_helper import PriceFetcher
+    if not symbol and not company_name:
+        raise HTTPException(status_code=400, detail="Either symbol or company_name is required.")
+    
+    fetcher = PriceFetcher(scrip_code=symbol, symbol=symbol, company_name=company_name)
+    if fetcher.history is None or fetcher.history.empty:
+        raise HTTPException(status_code=404, detail="No historical price data found.")
+    
+    history_dict = {}
+    for date_val, row in fetcher.history.iterrows():
+        date_str = date_val.strftime("%Y-%m-%d")
+        history_dict[date_str] = float(row["Close"])
+        
+    return {
+        "ticker": fetcher.ticker_symbol,
+        "history": history_dict
+    }
+
 # Mount static files to serve frontend
 app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
 

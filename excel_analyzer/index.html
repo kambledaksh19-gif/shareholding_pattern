@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Holding Change Analyzer</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS for client-side Excel/CSV parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(17, 24, 39, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --primary: #8b5cf6;
+            --primary-glow: rgba(139, 92, 246, 0.4);
+            --secondary: #06b6d4;
+            --secondary-glow: rgba(6, 182, 212, 0.3);
+            --success: #10b981;
+            --danger: #ef4444;
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --accent-bg: rgba(139, 92, 246, 0.1);
+            --table-hover: rgba(255, 255, 255, 0.02);
+            --input-bg: rgba(255, 255, 255, 0.03);
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .light-mode {
+            --bg-color: #f8fafc;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --card-border: rgba(0, 0, 0, 0.06);
+            --primary: #6d28d9;
+            --primary-glow: rgba(109, 40, 217, 0.2);
+            --secondary: #0891b2;
+            --secondary-glow: rgba(8, 145, 178, 0.2);
+            --success: #059669;
+            --danger: #dc2626;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --accent-bg: rgba(109, 40, 217, 0.05);
+            --table-hover: rgba(0, 0, 0, 0.015);
+            --input-bg: rgba(0, 0, 0, 0.02);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            transition: background-color 0.3s ease;
+        }
+
+        /* Ambient background decorative circles */
+        .decor-circles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.15;
+            mix-blend-mode: screen;
+        }
+
+        .light-mode .circle {
+            opacity: 0.08;
+            mix-blend-mode: multiply;
+        }
+
+        .circle-1 {
+            top: -10%;
+            right: 15%;
+            width: 450px;
+            height: 450px;
+            background: var(--primary);
+        }
+
+        .circle-2 {
+            bottom: 10%;
+            left: 5%;
+            width: 400px;
+            height: 400px;
+            background: var(--secondary);
+        }
+
+        header {
+            border-bottom: 1px solid var(--card-border);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(11, 15, 25, 0.5);
+            transition: background-color 0.3s ease;
+        }
+
+        .light-mode header {
+            background: rgba(248, 250, 252, 0.6);
+        }
+
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            font-size: 28px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 2px 8px var(--primary-glow));
+        }
+
+        .logo-text h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-text span {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-icon {
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-primary);
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: var(--transition);
+        }
+
+        .btn-icon:hover {
+            border-color: var(--primary);
+            background: var(--accent-bg);
+            color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--primary-glow);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 24px;
+            flex: 1;
+            width: 100%;
+        }
+
+        .glass-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            padding: 30px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+            transition: var(--transition);
+        }
+
+        .hero-section {
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-content {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .hero-icon {
+            font-size: 48px;
+            color: var(--primary);
+            margin-bottom: 16px;
+            filter: drop-shadow(0 4px 12px var(--primary-glow));
+            animation: float 4s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        .hero-content h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, var(--text-primary), var(--text-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-content p {
+            color: var(--text-secondary);
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        /* Upload Area */
+        .drag-drop-zone {
+            border: 2px dashed var(--card-border);
+            border-radius: 12px;
+            padding: 50px 30px;
+            text-align: center;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.01);
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .drag-drop-zone:hover, .drag-drop-zone.dragover {
+            border-color: var(--primary);
+            background: var(--accent-bg);
+            box-shadow: inset 0 0 20px rgba(139, 92, 246, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 40px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            transition: var(--transition);
+        }
+
+        .drag-drop-zone:hover .upload-icon, .drag-drop-zone.dragover .upload-icon {
+            color: var(--primary);
+            transform: scale(1.1);
+        }
+
+        .drag-drop-zone h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .drag-drop-zone p {
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        .hidden-input {
+            display: none;
+        }
+
+        /* Settings Card (Column mapping) */
+        .settings-card {
+            margin-top: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .settings-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--primary);
+            font-weight: 600;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .custom-select {
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-primary);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            width: 100%;
+            cursor: pointer;
+            font-family: inherit;
+            transition: var(--transition);
+        }
+
+        .custom-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-glow);
+        }
+
+        /* Dashboard Analysis Results */
+        .analysis-section {
+            margin-top: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .metric-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .metric-icon-box {
+            width: 52px;
+            height: 52px;
+            border-radius: 10px;
+            background: var(--accent-bg);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+        }
+
+        .metric-card:nth-child(2) .metric-icon-box {
+            background: rgba(6, 182, 212, 0.1);
+            color: var(--secondary);
+        }
+
+        .metric-card:nth-child(3) .metric-icon-box {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+
+        .metric-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        .metric-value {
+            font-family: 'Outfit', sans-serif;
+            font-size: 26px;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+
+        /* Results table & toolbar */
+        .results-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            max-width: 400px;
+            min-width: 250px;
+        }
+
+        .search-input {
+            width: 100%;
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-primary);
+            padding: 12px 14px 12px 42px;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            font-family: inherit;
+            transition: var(--transition);
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-glow);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-action {
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-primary);
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition);
+        }
+
+        .btn-action:hover {
+            background: var(--text-primary);
+            color: var(--bg-color);
+            border-color: var(--text-primary);
+        }
+
+        .light-mode .btn-action:hover {
+            background: var(--text-primary);
+            color: var(--bg-color);
+        }
+
+        .btn-primary-action {
+            background: var(--primary);
+            border: 1px solid var(--primary);
+            color: #ffffff;
+        }
+
+        .btn-primary-action:hover {
+            background: #7c3aed;
+            border-color: #7c3aed;
+            box-shadow: 0 4px 12px var(--primary-glow);
+        }
+
+        /* Data table custom styling */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid var(--card-border);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        .data-table th {
+            background: rgba(255, 255, 255, 0.02);
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            padding: 16px;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--card-border);
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+
+        .data-table td {
+            padding: 16px;
+            border-bottom: 1px solid var(--card-border);
+            color: var(--text-primary);
+            transition: var(--transition);
+        }
+
+        .data-table tbody tr {
+            cursor: pointer;
+        }
+
+        .data-table tbody tr:hover {
+            background-color: var(--table-hover);
+        }
+
+        .company-row-summary {
+            font-weight: 600;
+        }
+
+        .badge-count {
+            background: var(--accent-bg);
+            color: var(--primary);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            display: inline-block;
+            border: 1px solid rgba(139, 92, 246, 0.15);
+        }
+
+        .badge-high {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border-color: rgba(239, 68, 68, 0.15);
+        }
+
+        .expand-toggle {
+            text-align: right;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .data-table tbody tr:hover .expand-toggle {
+            color: var(--primary);
+            transform: translateX(3px);
+        }
+
+        /* Detail expanded row styling */
+        .detail-row {
+            background: rgba(0, 0, 0, 0.12);
+        }
+
+        .light-mode .detail-row {
+            background: rgba(0, 0, 0, 0.015);
+        }
+
+        .detail-container {
+            padding: 20px 24px;
+            border-left: 3px solid var(--primary);
+        }
+
+        .detail-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .sub-table-wrapper {
+            max-height: 350px;
+            overflow-y: auto;
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .sub-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .sub-table th {
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.01);
+            border-bottom: 1px solid var(--card-border);
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .sub-table td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--card-border);
+            color: var(--text-secondary);
+            font-family: monospace;
+        }
+
+        .sub-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .empty-row-msg {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        .empty-row-msg i {
+            font-size: 32px;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        /* Loading indicator spinner */
+        .loader-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 50px 0;
+            gap: 16px;
+        }
+
+        .radar-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid transparent;
+            border-top-color: var(--primary);
+            border-bottom-color: var(--secondary);
+            border-radius: 50%;
+            animation: spin 1.2s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loader-wrapper p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        footer {
+            border-top: 1px solid var(--card-border);
+            text-align: center;
+            padding: 24px;
+            color: var(--text-muted);
+            font-size: 12px;
+            margin-top: auto;
+            backdrop-filter: blur(12px);
+        }
+
+        /* Alert and feedback banners */
+        .alert-banner {
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .alert-banner-success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .alert-banner-error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Smooth reveal transitions */
+        .fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="dark-mode">
+    <div class="decor-circles">
+        <div class="circle circle-1"></div>
+        <div class="circle circle-2"></div>
+    </div>
+
+    <header>
+        <div class="header-container">
+            <div class="logo">
+                <i class="fa-solid fa-file-shield logo-icon"></i>
+                <div class="logo-text">
+                    <h1>Antigravity</h1>
+                    <span>Excel Holding Analyzer</span>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button id="theme-toggle" class="btn-icon" title="Toggle Light/Dark Theme">
+                    <i class="fa-solid fa-sun"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Hero Panel -->
+        <section class="glass-panel hero-section">
+            <div class="hero-content">
+                <i class="fa-solid fa-file-circle-check hero-icon"></i>
+                <h2>Spreadsheet Change Analyzer</h2>
+                <p>Upload your quarterly consolidated Excel or CSV files. The system will automatically parse and group your data to identify companies with 4 or more promoter holding changes (appearing 4 or more times in the dataset).</p>
+            </div>
+        </section>
+
+        <!-- Main Upload Card -->
+        <section class="glass-panel" style="margin-bottom: 30px;">
+            <div class="drag-drop-zone" id="drop-zone">
+                <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+                <h3>Drag & Drop Excel or CSV here</h3>
+                <p>Supports .xlsx, .xls, and .csv formats</p>
+                <input type="file" id="file-input" accept=".xlsx,.xls,.csv" class="hidden-input">
+            </div>
+
+            <div id="alert-container"></div>
+
+            <!-- Loader status -->
+            <div id="loader" class="loader-wrapper hidden">
+                <div class="radar-spinner"></div>
+                <p>Parsing spreadsheet contents client-side...</p>
+            </div>
+
+            <!-- Column Config Selector (visible once parsed) -->
+            <div id="settings-area" class="settings-card hidden fade-in">
+                <hr style="border: none; border-top: 1px solid var(--card-border);">
+                <div class="settings-header">
+                    <i class="fa-solid fa-gear"></i>
+                    <span>Configure Analyzer Columns</span>
+                </div>
+                <div class="form-group">
+                    <label for="column-select">Target Company Column (Contains names or symbols):</label>
+                    <select id="column-select" class="custom-select">
+                        <!-- Options injected dynamically -->
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- Analysis Dashboard (hidden until parsed) -->
+        <section id="analysis-results" class="analysis-section hidden fade-in">
+            <!-- Metrics -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-icon-box">
+                        <i class="fa-solid fa-database"></i>
+                    </div>
+                    <div class="metric-info">
+                        <span class="metric-label">Total Rows Analyzed</span>
+                        <span class="metric-value" id="metric-total-rows">0</span>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-icon-box">
+                        <i class="fa-solid fa-building"></i>
+                    </div>
+                    <div class="metric-info">
+                        <span class="metric-label">Unique Companies</span>
+                        <span class="metric-value" id="metric-unique-companies">0</span>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-icon-box">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <div class="metric-info">
+                        <span class="metric-label">Companies with 4+ Changes</span>
+                        <span class="metric-value" id="metric-matched-companies">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Results Panel -->
+            <div class="glass-panel results-panel">
+                <div class="toolbar">
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                        <input type="text" id="search-input" class="search-input" placeholder="Search companies by name...">
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button id="btn-copy" class="btn-action" title="Copy names to clipboard">
+                            <i class="fa-solid fa-copy"></i> Copy Names
+                        </button>
+                        <button id="btn-export" class="btn-action btn-primary-action" title="Download Excel compiled results">
+                            <i class="fa-solid fa-file-excel"></i> Export Filtered CSV
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="data-table" id="results-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 80px;">Rank</th>
+                                <th>Company Identifier</th>
+                                <th style="width: 200px; text-align: center;">Total Occurrences</th>
+                                <th style="width: 100px; text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-tbody">
+                            <!-- Injected dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>© 2026 Antigravity. Standalone Client-Side Spreadsheet Analyzer.</p>
+    </footer>
+
+    <!-- Logic implementation -->
+    <script>
+        // State
+        let rawHeaders = [];
+        let rawDataRows = []; // 2D array of raw values starting from data rows
+        let parsedCompaniesMap = {}; // company_name -> Array of row objects
+        let sortedAnalysisResults = []; // Array of { name, count, occurrences }
+        let currentSelectedColIdx = 0;
+        let fileLoadedName = '';
+
+        // DOM elements
+        const themeToggle = document.getElementById("theme-toggle");
+        const dropZone = document.getElementById("drop-zone");
+        const fileInput = document.getElementById("file-input");
+        const alertContainer = document.getElementById("alert-container");
+        const loader = document.getElementById("loader");
+        const settingsArea = document.getElementById("settings-area");
+        const columnSelect = document.getElementById("column-select");
+        
+        const analysisResultsSection = document.getElementById("analysis-results");
+        const metricTotalRows = document.getElementById("metric-total-rows");
+        const metricUniqueCompanies = document.getElementById("metric-unique-companies");
+        const metricMatchedCompanies = document.getElementById("metric-matched-companies");
+        
+        const searchInput = document.getElementById("search-input");
+        const btnCopy = document.getElementById("btn-copy");
+        const btnExport = document.getElementById("btn-export");
+        const resultsTbody = document.getElementById("results-tbody");
+
+        // 1. Theme toggle initialization and handler
+        if (localStorage.getItem("theme") === "light") {
+            document.body.classList.remove("dark-mode");
+            document.body.classList.add("light-mode");
+            themeToggle.innerHTML = '<i class="fa-solid fa-moon"></i>';
+        } else {
+            document.body.classList.add("dark-mode");
+            document.body.classList.remove("light-mode");
+            themeToggle.innerHTML = '<i class="fa-solid fa-sun"></i>';
+        }
+
+        themeToggle.addEventListener("click", () => {
+            if (document.body.classList.contains("dark-mode")) {
+                document.body.classList.remove("dark-mode");
+                document.body.classList.add("light-mode");
+                themeToggle.innerHTML = '<i class="fa-solid fa-moon"></i>';
+                localStorage.setItem("theme", "light");
+            } else {
+                document.body.classList.add("dark-mode");
+                document.body.classList.remove("light-mode");
+                themeToggle.innerHTML = '<i class="fa-solid fa-sun"></i>';
+                localStorage.setItem("theme", "dark");
+            }
+        });
+
+        // 2. Drag & Drop event wiring
+        dropZone.addEventListener("click", () => fileInput.click());
+
+        fileInput.addEventListener("change", (e) => {
+            if (e.target.files.length > 0) {
+                processFile(e.target.files[0]);
+            }
+        });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+            }, false);
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0) {
+                processFile(files[0]);
+            }
+        }, false);
+
+        // UI alerts helper
+        function showAlert(message, type = 'success') {
+            alertContainer.innerHTML = `
+                <div class="alert-banner alert-banner-${type} fade-in">
+                    <i class="fa-solid ${type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation'}"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+        }
+
+        function clearAlert() {
+            alertContainer.innerHTML = '';
+        }
+
+        // 3. Process uploaded file using SheetJS
+        function processFile(file) {
+            const validExtensions = ['.xlsx', '.xls', '.csv'];
+            const fileExt = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+            
+            if (!validExtensions.includes(fileExt)) {
+                showAlert("Unsupported file type! Please upload an Excel (.xlsx, .xls) or CSV file.", "error");
+                return;
+            }
+
+            clearAlert();
+            loader.classList.remove("hidden");
+            settingsArea.classList.add("hidden");
+            analysisResultsSection.classList.add("hidden");
+            fileLoadedName = file.name;
+
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    if (workbook.SheetNames.length === 0) {
+                        throw new Error("The uploaded spreadsheet contains no worksheets.");
+                    }
+                    
+                    // Parse the active sheet
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    
+                    // Read raw cells as a grid of arrays (rows)
+                    const grid = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+                    
+                    if (grid.length === 0) {
+                        throw new Error("The worksheet contains no rows.");
+                    }
+                    
+                    // Clean grid (remove completely empty rows)
+                    const cleanedGrid = grid.filter(row => row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== ""));
+                    
+                    if (cleanedGrid.length === 0) {
+                        throw new Error("No data found in sheet (all rows were empty).");
+                    }
+                    
+                    analyzeGrid(cleanedGrid);
+                    
+                } catch (error) {
+                    console.error("Parsing failed:", error);
+                    showAlert("Failed to parse spreadsheet: " + error.message, "error");
+                    loader.classList.add("hidden");
+                }
+            };
+            
+            reader.onerror = function() {
+                showAlert("Failed to read file.", "error");
+                loader.classList.add("hidden");
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+
+        // 4. Smart column/header detection and grid analysis
+        function analyzeGrid(grid) {
+            // Scan first 10 rows to detect headers
+            let headerRowIdx = 0;
+            let targetColIdx = 0;
+            let headerFound = false;
+            
+            const keywords = [
+                "companyname", "company", "name", "symbol", "ticker", 
+                "scripcode", "scrip", "code", "bse", "nse", 
+                "securityname", "issuer", "security"
+            ];
+            
+            // Loop rows
+            for (let r = 0; r < Math.min(10, grid.length); r++) {
+                const row = grid[r];
+                for (let c = 0; c < row.length; c++) {
+                    const cellVal = row[c];
+                    if (cellVal !== null && cellVal !== undefined && cellVal !== "") {
+                        const rawStr = String(cellVal).trim();
+                        // Skip if it looks like a URL or is too long for a column header
+                        if (rawStr.includes("://") || rawStr.includes("www.") || rawStr.length > 50) {
+                            continue;
+                        }
+                        
+                        // We also want to make sure this row index has at least one row below it
+                        if (r >= grid.length - 1) {
+                            continue;
+                        }
+
+                        const cleanVal = rawStr.toLowerCase().replace(/[^a-z0-9]/g, "");
+                        
+                        // Exact match or partial match
+                        if (keywords.includes(cleanVal) || keywords.some(kw => cleanVal.includes(kw))) {
+                            targetColIdx = c;
+                            headerRowIdx = r;
+                            headerFound = true;
+                            break;
+                        }
+                    }
+                }
+                if (headerFound) break;
+            }
+            
+            // Extract headers and data rows
+            if (headerFound) {
+                rawHeaders = grid[headerRowIdx].map((h, idx) => h ? String(h).trim() : `Column ${idx + 1}`);
+                rawDataRows = grid.slice(headerRowIdx + 1);
+            } else if (grid.length > 1) {
+                // Default fallback: first row is header, first column is target
+                headerRowIdx = 0;
+                targetColIdx = 0;
+                headerFound = true;
+                rawHeaders = grid[0].map((h, idx) => h ? String(h).trim() : `Column ${idx + 1}`);
+                rawDataRows = grid.slice(1);
+            } else {
+                // Sheet only has 1 row
+                rawHeaders = grid[0].map((h, idx) => h ? String(h).trim() : `Column ${idx + 1}`);
+                rawDataRows = [];
+                targetColIdx = 0;
+            }
+
+            // Populate selector dropdown
+            columnSelect.innerHTML = '';
+            rawHeaders.forEach((headerName, idx) => {
+                const opt = document.createElement("option");
+                opt.value = idx;
+                opt.textContent = `${headerName} (Column ${idx + 1})`;
+                if (idx === targetColIdx) {
+                    opt.selected = true;
+                }
+                columnSelect.appendChild(opt);
+            });
+
+            // Update current target index
+            currentSelectedColIdx = targetColIdx;
+            
+            // Run analysis group logic
+            runGroupingAndCalculations();
+            
+            // Show config section
+            loader.classList.add("hidden");
+            settingsArea.classList.remove("hidden");
+            analysisResultsSection.classList.remove("hidden");
+            
+            const detectedLabel = headerFound ? `"${rawHeaders[targetColIdx]}"` : `Column 1 (fallback)`;
+            showAlert(`Successfully loaded "${fileLoadedName}". Target column detected as ${detectedLabel}.`, "success");
+        }
+
+        // Listener for manual column selector change
+        columnSelect.addEventListener("change", (e) => {
+            currentSelectedColIdx = parseInt(e.target.value);
+            runGroupingAndCalculations();
+        });
+
+        // 5. Grouping, counting, filtering and rendering logic
+        function runGroupingAndCalculations() {
+            parsedCompaniesMap = {};
+            
+            // Group raw data rows by target column value
+            rawDataRows.forEach(row => {
+                if (row.length <= currentSelectedColIdx) return;
+                
+                const compVal = row[currentSelectedColIdx];
+                if (compVal === null || compVal === undefined || String(compVal).trim() === "") return;
+                
+                const companyName = String(compVal).trim();
+                
+                // Map row array values into header keys
+                const rowObj = {};
+                rawHeaders.forEach((headerKey, idx) => {
+                    rowObj[headerKey] = (row[idx] !== undefined && row[idx] !== null) ? String(row[idx]).trim() : "";
+                });
+                
+                if (!parsedCompaniesMap[companyName]) {
+                    parsedCompaniesMap[companyName] = [];
+                }
+                parsedCompaniesMap[companyName].push(rowObj);
+            });
+
+            // Filter for companies with 4 or more occurrences, map, and sort
+            sortedAnalysisResults = [];
+            let totalUniqueCompanies = 0;
+            
+            for (const [name, occurrences] of Object.entries(parsedCompaniesMap)) {
+                totalUniqueCompanies++;
+                if (occurrences.length >= 4) {
+                    sortedAnalysisResults.push({
+                        name: name,
+                        count: occurrences.length,
+                        occurrences: occurrences
+                    });
+                }
+            }
+
+            // Sort results: count desc, then alphabetically by name
+            sortedAnalysisResults.sort((a, b) => {
+                if (b.count !== a.count) {
+                    return b.count - a.count;
+                }
+                return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+            });
+
+            // Update Metric Cards
+            metricTotalRows.textContent = rawDataRows.length;
+            metricUniqueCompanies.textContent = totalUniqueCompanies;
+            metricMatchedCompanies.textContent = sortedAnalysisResults.length;
+
+            // Render table
+            renderResultsTable();
+        }
+
+        // 6. Rendering results table dynamically
+        function renderResultsTable(filterText = '') {
+            resultsTbody.innerHTML = '';
+            
+            const filteredResults = sortedAnalysisResults.filter(item => 
+                item.name.toLowerCase().includes(filterText.toLowerCase())
+            );
+
+            if (filteredResults.length === 0) {
+                resultsTbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="empty-row-msg">
+                            <i class="fa-solid fa-building-circle-exclamation"></i>
+                            No companies found matching the criteria ${filterText ? 'and search query' : '(4+ changes)'}.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            filteredResults.forEach((item, index) => {
+                // Table Row for company
+                const tr = document.createElement("tr");
+                tr.className = "company-row-header";
+                tr.setAttribute("data-company-name", item.name);
+                tr.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td class="company-row-summary">${item.name}</td>
+                    <td style="text-align: center;">
+                        <span class="badge-count ${item.count >= 8 ? 'badge-high' : ''}">
+                            ${item.count} changes
+                        </span>
+                    </td>
+                    <td class="expand-toggle">
+                        <span>Details <i class="fa-solid fa-chevron-down"></i></span>
+                    </td>
+                `;
+
+                // Collapsible detailed row for occurrences
+                const detailTr = document.createElement("tr");
+                detailTr.className = "detail-row hidden";
+                detailTr.id = `detail-${index}`;
+                
+                // Build occurrences sub-table headers & rows
+                let subHeadersHtml = rawHeaders.map(h => `<th>${h}</th>`).join('');
+                
+                let subRowsHtml = item.occurrences.map(occ => {
+                    let cellsHtml = rawHeaders.map(h => `<td>${occ[h] || ""}</td>`).join('');
+                    return `<tr>${cellsHtml}</tr>`;
+                }).join('');
+
+                detailTr.innerHTML = `
+                    <td colspan="4" style="padding: 0;">
+                        <div class="detail-container fade-in">
+                            <div class="detail-title">
+                                <i class="fa-solid fa-list-check" style="margin-right: 6px;"></i>
+                                All quarterly occurrences for "${item.name}" inside Excel
+                            </div>
+                            <div class="sub-table-wrapper">
+                                <table class="sub-table">
+                                    <thead>
+                                        <tr>${subHeadersHtml}</tr>
+                                    </thead>
+                                    <tbody>
+                                        ${subRowsHtml}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </td>
+                `;
+
+                // Event listener to toggle details
+                tr.addEventListener("click", () => {
+                    const isHidden = detailTr.classList.contains("hidden");
+                    
+                    // Collapse all other detail rows first
+                    document.querySelectorAll('.detail-row').forEach(row => row.classList.add('hidden'));
+                    document.querySelectorAll('.expand-toggle span').forEach(el => {
+                        el.innerHTML = 'Details <i class="fa-solid fa-chevron-down"></i>';
+                    });
+
+                    if (isHidden) {
+                        detailTr.classList.remove("hidden");
+                        tr.querySelector('.expand-toggle span').innerHTML = 'Close <i class="fa-solid fa-chevron-up"></i>';
+                    }
+                });
+
+                resultsTbody.appendChild(tr);
+                resultsTbody.appendChild(detailTr);
+            });
+        }
+
+        // Realtime Search Event
+        searchInput.addEventListener("input", (e) => {
+            renderResultsTable(e.target.value.trim());
+        });
+
+        // 7. Clipboard action (Copy names)
+        btnCopy.addEventListener("click", () => {
+            if (sortedAnalysisResults.length === 0) {
+                alert("No results to copy!");
+                return;
+            }
+            
+            const filterText = searchInput.value.trim();
+            const filteredResults = sortedAnalysisResults.filter(item => 
+                item.name.toLowerCase().includes(filterText.toLowerCase())
+            );
+
+            const namesList = filteredResults.map(item => item.name).join('\n');
+            
+            navigator.clipboard.writeText(namesList).then(() => {
+                const originalText = btnCopy.innerHTML;
+                btnCopy.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
+                btnCopy.style.borderColor = 'var(--success)';
+                btnCopy.style.color = 'var(--success)';
+                
+                setTimeout(() => {
+                    btnCopy.innerHTML = originalText;
+                    btnCopy.style.borderColor = '';
+                    btnCopy.style.color = '';
+                }, 2000);
+            }).catch(err => {
+                console.error("Clipboard copy failed:", err);
+                alert("Failed to copy to clipboard.");
+            });
+        });
+
+        // 8. CSV Export action
+        btnExport.addEventListener("click", () => {
+            if (sortedAnalysisResults.length === 0) {
+                alert("No results to export!");
+                return;
+            }
+
+            const filterText = searchInput.value.trim();
+            const filteredResults = sortedAnalysisResults.filter(item => 
+                item.name.toLowerCase().includes(filterText.toLowerCase())
+            );
+
+            // Create CSV lines array
+            const csvLines = ["Rank,Company Name,Total Occurrences (Changes)"];
+            
+            // Add rows
+            filteredResults.forEach((item, index) => {
+                const escapedName = `"${item.name.replace(/"/g, '""')}"`;
+                csvLines.push(`${index + 1},${escapedName},${item.count}`);
+            });
+
+            // Create Blob and Object URL
+            const csvString = csvLines.join('\n');
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const downloadLink = document.createElement("a");
+            downloadLink.setAttribute("href", url);
+            
+            const cleanFileName = fileLoadedName.substring(0, fileLoadedName.lastIndexOf('.')) || 'holding_changes';
+            downloadLink.setAttribute("download", `${cleanFileName}_filtered_4plus_changes.csv`);
+            document.body.appendChild(downloadLink);
+            
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            
+            // Free memory
+            URL.revokeObjectURL(url);
+        });
+
+    </script>
+</body>
+</html>
