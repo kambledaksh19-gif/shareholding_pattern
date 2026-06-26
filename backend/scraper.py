@@ -272,6 +272,7 @@ def fetch_modern_data(scrip_code, qtr_id):
     promoter_shareholders = 0
     
     # In Promoter, the main subtotal is STA1A2 or Category "Promoter and Promoter Group" where name is None
+    found_promoter = False
     for row in result["promoter"]:
         if row["code"] == "STA1A2" or (row["category"] == "Promoter and Promoter Group" and row["shareholder_name"] is None and row["sub_category"] is None):
             promoter_total_shares = row["shares"]
@@ -280,8 +281,24 @@ def fetch_modern_data(scrip_code, qtr_id):
             promoter_pledged_shares = row["pledged_shares"]
             promoter_pledged_percent = row["pledged_percentage"]
             promoter_shareholders = row["no_shareholders"]
+            found_promoter = True
             break
-    else:
+            
+    if not found_promoter:
+        # Try to find STA1 and STA2 (Indian and Foreign subtotals)
+        subtotal_rows = [r for r in result["promoter"] if r["code"] in ["STA1", "STA2"]]
+        if subtotal_rows:
+            for row in subtotal_rows:
+                promoter_total_shares += row["shares"]
+                promoter_total_percent += row["percentage"]
+                promoter_demat_shares += row["demat_shares"]
+                promoter_pledged_shares += row["pledged_shares"]
+                promoter_shareholders += row["no_shareholders"]
+            if promoter_total_shares > 0 and promoter_pledged_shares > 0:
+                promoter_pledged_percent = (promoter_pledged_shares / promoter_total_shares) * 100.0
+            found_promoter = True
+            
+    if not found_promoter:
         # Fallback: sum up categories
         for row in result["promoter"]:
             if row["shareholder_name"] is None and row["sub_category"] in ["Indian", "Foreign"] and row["shares"] > 0:
@@ -299,14 +316,28 @@ def fetch_modern_data(scrip_code, qtr_id):
     public_shareholders = 0
     
     # In Public, search for total public shareholding row (usually Category "Public shareholder" total)
+    found_public = False
     for row in result["public"]:
         if row["code"] in ["STB1B2B3", "STB"] or (row["category"] == "Public shareholder" and row["shareholder_name"] is None and row["sub_category"] is None and row["shares"] > 0):
             public_total_shares = row["shares"]
             public_total_percent = row["percentage"]
             public_demat_shares = row["demat_shares"]
             public_shareholders = row["no_shareholders"]
+            found_public = True
             break
-    else:
+            
+    if not found_public:
+        # Try to find STB1, STB2, STB3 (Institutions, Central/State Govt, Non-Institutions subtotals)
+        subtotal_rows = [r for r in result["public"] if r["code"] in ["STB1", "STB2", "STB3"]]
+        if subtotal_rows:
+            for row in subtotal_rows:
+                public_total_shares += row["shares"]
+                public_total_percent += row["percentage"]
+                public_demat_shares += row["demat_shares"]
+                public_shareholders += row["no_shareholders"]
+            found_public = True
+            
+    if not found_public:
         # Fallback: sum up Institutions and Non-Institutions
         for row in result["public"]:
             if row["shareholder_name"] is None and row["sub_category"] in ["Institutions", "Non-Institutions"] and row["shares"] > 0:
@@ -320,14 +351,28 @@ def fetch_modern_data(scrip_code, qtr_id):
     non_promoter_demat_shares = 0
     non_promoter_shareholders = 0
     
+    found_non_promoter = False
     for row in result["non_promoter"]:
         if row["code"] in ["STC1C2", "STC"] or (row["category"] == "Non Promoter- Non Public shareholder" and row["shareholder_name"] is None and row["sub_category"] is None and row["shares"] > 0):
             non_promoter_total_shares = row["shares"]
             non_promoter_total_percent = row["percentage"]
             non_promoter_demat_shares = row["demat_shares"]
             non_promoter_shareholders = row["no_shareholders"]
+            found_non_promoter = True
             break
-    else:
+            
+    if not found_non_promoter:
+        # Try to find STC1, STC2 (DR Holders, Employee Benefit Trusts subtotals)
+        subtotal_rows = [r for r in result["non_promoter"] if r["code"] in ["STC1", "STC2"]]
+        if subtotal_rows:
+            for row in subtotal_rows:
+                non_promoter_total_shares += row["shares"]
+                non_promoter_total_percent += row["percentage"]
+                non_promoter_demat_shares += row["demat_shares"]
+                non_promoter_shareholders += row["no_shareholders"]
+            found_non_promoter = True
+            
+    if not found_non_promoter:
         # Fallback
         for row in result["non_promoter"]:
             if row["shareholder_name"] is None and row["shares"] > 0:
@@ -961,6 +1006,17 @@ def get_quarterly_filings(filings):
     Groups filings by (year, quarter_month) to select the latest filing for each quarter.
     """
     quarters = {}
+    from datetime import datetime
+    
+    def get_filing_date(f):
+        d_str = f.get("revised_date_time") or f.get("filing_date_time")
+        if d_str:
+            try:
+                return datetime.strptime(d_str[:19], "%Y-%m-%dT%H:%M:%S")
+            except Exception:
+                pass
+        return datetime.min
+
     for f in filings:
         qtr_name = str(f.get("qtr", "")).lower()
         nav_url = str(f.get("navigateurl", "")).lower()
@@ -996,10 +1052,21 @@ def get_quarterly_filings(filings):
             continue
             
         key = (year, qtr_month)
-        qtr_id = float(f.get("qtrid", 0.0))
         
-        if key not in quarters or qtr_id > float(quarters[key].get("qtrid", 0.0)):
+        if key not in quarters:
             quarters[key] = f
+        else:
+            existing_f = quarters[key]
+            existing_date = get_filing_date(existing_f)
+            new_date = get_filing_date(f)
+            
+            if new_date > existing_date:
+                quarters[key] = f
+            elif new_date == existing_date:
+                existing_qtrid = float(existing_f.get("qtrid", 0.0))
+                new_qtrid = float(f.get("qtrid", 0.0))
+                if new_qtrid > existing_qtrid:
+                    quarters[key] = f
             
     return quarters
 
