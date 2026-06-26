@@ -273,5 +273,14 @@
     </footer>
 
     <script src="app.js"></script>
+    <script>
+        // Immediately clear any legacy autofilled path containing "kambl"
+        (function() {
+            const input = document.getElementById("save-path-input");
+            if (input && input.value && input.value.toLowerCase().includes("kambl")) {
+                input.value = "";
+            }
+        })();
+    </script>
 </body>
 </html>

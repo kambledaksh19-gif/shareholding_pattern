@@ -501,10 +501,22 @@ const batchDownloadBtn = document.getElementById("batch-download-btn");
 const batchResetBtn = document.getElementById("batch-reset-btn");
 const savePathInput = document.getElementById("save-path-input");
 if (savePathInput) {
+    // Clean up any legacy cached paths containing "kambl"
     const cachedSavePath = localStorage.getItem("shp_excel_save_path");
-    if (cachedSavePath) {
-        savePathInput.value = cachedSavePath;
+    if (cachedSavePath && cachedSavePath.toLowerCase().includes("kambl")) {
+        localStorage.removeItem("shp_excel_save_path");
     }
+    
+    // Clear the input value if the browser auto-filled it from history/cache
+    if (savePathInput.value && savePathInput.value.toLowerCase().includes("kambl")) {
+        savePathInput.value = "";
+    }
+
+    const currentCached = localStorage.getItem("shp_excel_save_path");
+    if (currentCached) {
+        savePathInput.value = currentCached;
+    }
+    
     savePathInput.addEventListener("input", () => {
         localStorage.setItem("shp_excel_save_path", savePathInput.value.trim());
     });
