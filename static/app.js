@@ -500,6 +500,15 @@ const batchStatusMessage = document.getElementById("batch-status-message");
 const batchDownloadBtn = document.getElementById("batch-download-btn");
 const batchResetBtn = document.getElementById("batch-reset-btn");
 const savePathInput = document.getElementById("save-path-input");
+if (savePathInput) {
+    const cachedSavePath = localStorage.getItem("shp_excel_save_path");
+    if (cachedSavePath) {
+        savePathInput.value = cachedSavePath;
+    }
+    savePathInput.addEventListener("input", () => {
+        localStorage.setItem("shp_excel_save_path", savePathInput.value.trim());
+    });
+}
 const batchErrorsContainer = document.getElementById("batch-errors-container");
 const batchErrorsList = document.getElementById("batch-errors-list");
 
