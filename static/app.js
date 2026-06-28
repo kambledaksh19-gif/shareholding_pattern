@@ -586,11 +586,7 @@ async function uploadCSV(file) {
     }
     
     const savePath = savePathInput.value.trim();
-    if (!savePath) {
-        alert("Please enter a valid absolute path to save the Excel file.");
-        return;
-    }
-    if (!savePath.toLowerCase().endsWith(".xlsx")) {
+    if (savePath && !savePath.toLowerCase().endsWith(".xlsx")) {
         alert("The save path must end with '.xlsx'.");
         return;
     }

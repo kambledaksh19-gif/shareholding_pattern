@@ -195,18 +195,18 @@
             <p class="batch-desc">Upload a CSV file containing BSE listed company symbols or 6-digit scrip codes. The system will compile historical quarterly shareholding patterns along with stock price performance (CMP after one month, CMP after 18 months, CMP after 24 months) and export everything into a single consolidated Excel sheet.</p>
             
             <div class="save-path-wrapper" style="margin-bottom: 24px; text-align: left;">
-                <label for="save-path-input" style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px; color: var(--text-secondary);">Excel Save Path (Absolute path on your computer):</label>
+                <label for="save-path-input" style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px; color: var(--text-secondary);">Excel Save Path (Absolute path on your computer - Optional):</label>
                 <div style="position: relative; display: flex; align-items: center;">
                     <i class="fa-solid fa-folder-open" style="position: absolute; left: 14px; color: var(--text-muted);"></i>
                     <input type="text" id="save-path-input" 
-                           placeholder="e.g., C:\Users\YourName\Documents\compiled_report.xlsx" 
+                           placeholder="Optional. Leave blank to download via browser after compilation" 
                            style="width: 100%; padding: 12px 14px 12px 42px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); font-family: inherit; font-size: 14px; transition: border-color 0.2s;"
                            onfocus="this.style.borderColor='var(--primary)'"
                            onblur="this.style.borderColor='var(--border-color)'">
                 </div>
                 <p style="font-size: 12px; color: var(--text-muted); margin-top: 6px; line-height: 1.4; display: flex; align-items: flex-start; gap: 6px;">
                     <i class="fa-solid fa-circle-info" style="margin-top: 2px; color: var(--primary);"></i>
-                    <span><strong>Guide:</strong> Enter the full absolute path where you want the compiled Excel file to be saved on your computer (e.g., <code>C:\Users\YourName\Desktop\report.xlsx</code> on Windows or <code>/Users/YourName/Desktop/report.xlsx</code> on Mac/Linux). Ensure the target folder exists and is writable.</span>
+                    <span><strong>Guide:</strong> (Optional) Enter the full absolute path where you want the compiled Excel file to be saved on your computer (e.g., <code>C:\Users\YourName\Desktop\report.xlsx</code>). If left blank, you can download the report directly via the browser once complete (recommended).</span>
                 </p>
             </div>
 
