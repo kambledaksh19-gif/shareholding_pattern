@@ -3,6 +3,7 @@ import sys
 import uuid
 import shutil
 import zipfile
+import json
 
 # Add current directory to path to allow importing local modules on hosting environments
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
@@ -44,6 +45,30 @@ BATCH_JOBS_DIR = os.path.join(CACHE_DIR, "batch_jobs")
 os.makedirs(BATCH_JOBS_DIR, exist_ok=True)
 
 batch_jobs = {}
+
+def save_job_state(job_id: str):
+    try:
+        job_dir = os.path.join(BATCH_JOBS_DIR, job_id)
+        if os.path.exists(job_dir):
+            state_path = os.path.join(job_dir, "job_state.json")
+            with open(state_path, "w", encoding="utf-8") as f:
+                json.dump(batch_jobs[job_id], f, indent=4)
+    except Exception as e:
+        print(f"Error saving job state for {job_id}: {e}")
+
+def load_job_state(job_id: str) -> bool:
+    if job_id in batch_jobs:
+        return True
+    try:
+        job_dir = os.path.join(BATCH_JOBS_DIR, job_id)
+        state_path = os.path.join(job_dir, "job_state.json")
+        if os.path.exists(state_path):
+            with open(state_path, "r", encoding="utf-8") as f:
+                batch_jobs[job_id] = json.load(f)
+            return True
+    except Exception as e:
+        print(f"Error loading job state for {job_id}: {e}")
+    return False
 
 @app.get("/api/search")
 def api_search(symbol: str = Query(..., description="The symbol or name to search on BSE")):
@@ -125,6 +150,7 @@ def api_download(scripcode: str = Query(..., description="The 6-digit BSE scrip 
 
 def process_batch_job(job_id: str, symbols: list, output_xlsx_path: str):
     batch_jobs[job_id]["status"] = "processing"
+    save_job_state(job_id)
     
     def progress_callback(sym, idx, total, completed_count, failed_count, status_str, error_msg=None):
         sym_name = sym
@@ -138,6 +164,7 @@ def process_batch_job(job_id: str, symbols: list, output_xlsx_path: str):
                 "symbol": sym_name,
                 "error": error_msg or "Unknown error occurred"
             })
+        save_job_state(job_id)
 
     try:
         completed, failed = run_batch_compilation(symbols, output_xlsx_path, progress_callback)
@@ -149,6 +176,8 @@ def process_batch_job(job_id: str, symbols: list, output_xlsx_path: str):
     except Exception as e:
         batch_jobs[job_id]["status"] = "failed"
         batch_jobs[job_id]["error"] = str(e)
+    finally:
+        save_job_state(job_id)
 
 @app.post("/api/batch")
 async def api_batch_upload(
@@ -206,6 +235,7 @@ async def api_batch_upload(
         "error": None,
         "errors": []
     }
+    save_job_state(job_id)
     
     background_tasks.add_task(process_batch_job, job_id, symbols, xlsx_path)
     
@@ -216,7 +246,7 @@ async def api_batch_status(job_id: str = Query(..., description="The unique batc
     """
     Returns progress information for a batch job.
     """
-    if job_id not in batch_jobs:
+    if not load_job_state(job_id):
         raise HTTPException(status_code=404, detail="Batch job not found.")
         
     job = batch_jobs[job_id]
@@ -236,7 +266,7 @@ async def api_batch_download(job_id: str = Query(..., description="The unique ba
     """
     Downloads the completed Excel spreadsheet containing compiled quarterly holdings and stock price performance.
     """
-    if job_id not in batch_jobs:
+    if not load_job_state(job_id):
         raise HTTPException(status_code=404, detail="Batch job not found.")
         
     job = batch_jobs[job_id]
